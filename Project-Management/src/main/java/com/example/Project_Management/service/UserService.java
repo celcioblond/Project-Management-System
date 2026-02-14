@@ -2,10 +2,13 @@ package com.example.Project_Management.service;
 
 import com.example.Project_Management.model.User;
 import com.example.Project_Management.model.dto.UserCreate;
+import com.example.Project_Management.model.dto.UserRegister;
 import com.example.Project_Management.model.dto.UserResponse;
 import com.example.Project_Management.model.dto.UserUpdate;
 import com.example.Project_Management.repo.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCrypt;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,6 +19,7 @@ public class UserService {
 
     @Autowired
     private UserRepo userRepo;
+    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     public List<UserResponse> getAllUsers(){
         return userRepo.findAll().stream()
@@ -109,6 +113,46 @@ public class UserService {
 
         user.setPassword(newPassword);
         userRepo.save(user);
+    }
+
+    public UserResponse registerUser(UserRegister register){
+        if (userRepo.findByUsername(register.username()).isPresent()){
+            throw new RuntimeException("Username is already in use: " + register.username());
+        }
+
+        User user = new User();
+        user.setUsername(register.username());
+        user.setEmail(register.email());
+        user.setPassword(encoder.encode(register.password()));
+
+        user.setName("");
+        user.setRole("EMPLOYEE"); // Default role
+
+        User savedUser = userRepo.save(user);
+        return convertToUserResponse(savedUser);
+
+    }
+
+    public UserResponse saveUser(UserCreate userCreate) {
+        // Check if email already exists
+        if (userRepo.existsByEmail(userCreate.email())) {
+            throw new RuntimeException("Email already exists: " + userCreate.email());
+        }
+
+        // Create user
+        User user = new User();
+        user.setName(userCreate.name());
+        user.setUsername(userCreate.username());
+        user.setAge(userCreate.age());
+        user.setEmail(userCreate.email());
+        user.setPassword(encoder.encode(userCreate.password()));
+        user.setPosition(userCreate.position());
+        user.setDepartment(userCreate.department());
+        user.setRole(userCreate.role());
+
+        User savedUser = userRepo.save(user);
+
+        return convertToUserResponse(savedUser);
     }
 
     private UserResponse convertToUserResponse(User user){
