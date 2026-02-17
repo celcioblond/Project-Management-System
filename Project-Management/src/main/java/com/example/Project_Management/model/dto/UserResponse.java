@@ -5,6 +5,7 @@ public record UserResponse(
         String name,
         Integer age,
         String email,
+        String username,
         String position,
         String department,
         String role

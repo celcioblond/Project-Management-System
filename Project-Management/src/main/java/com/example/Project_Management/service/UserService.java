@@ -27,6 +27,12 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public UserResponse getUserByUsername(String username){
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+        return convertToUserResponse(user);
+    }
+
     public UserResponse getUserById(Long id){
         User user = userRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
@@ -161,6 +167,7 @@ public class UserService {
                 user.getName(),
                 user.getAge(),
                 user.getEmail(),
+                user.getUsername(),
                 user.getPosition(),
                 user.getDepartment(),
                 user.getRole()

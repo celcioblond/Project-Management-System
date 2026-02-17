@@ -1,6 +1,8 @@
 package com.example.Project_Management.controller;
 
+import com.example.Project_Management.model.User;
 import com.example.Project_Management.model.dto.Login;
+import com.example.Project_Management.model.dto.LoginResponse;
 import com.example.Project_Management.model.dto.UserRegister;
 import com.example.Project_Management.model.dto.UserResponse;
 import com.example.Project_Management.service.JwtService;
@@ -12,13 +14,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins="http://localhost:5173")
 public class AuthController {
 
     @Autowired
@@ -31,22 +31,40 @@ public class AuthController {
     private AuthenticationManager authenticationManager;
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@RequestBody UserRegister userRegister){
+    public ResponseEntity<LoginResponse> register(@RequestBody UserRegister userRegister){
         UserResponse userResponse = userService.registerUser(userRegister);
-        return new ResponseEntity<>(userResponse, HttpStatus.CREATED);
+
+        String token = jwtService.generateToken(userResponse.username());
+
+        LoginResponse loginResponse = new LoginResponse(
+                token,
+                userResponse.username(),
+                "EMPLOYEE"
+        );
+
+        return new ResponseEntity<>(loginResponse, HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody Login credentials){
+    public ResponseEntity<LoginResponse> login(@RequestBody Login credentials){
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(credentials.username(), credentials.password())
         );
 
         if(authentication.isAuthenticated()){
             String token = jwtService.generateToken(credentials.username());
-            return ResponseEntity.ok(token);
+
+            UserResponse userResponse = userService.getUserByUsername(credentials.username());
+
+            LoginResponse loginResponse = new LoginResponse(
+                    token,
+                    userResponse.username(),
+                    userResponse.role() != null ? userResponse.role() : "EMPLOYEE"
+            );
+
+            return ResponseEntity.ok(loginResponse);
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login failed");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 }
