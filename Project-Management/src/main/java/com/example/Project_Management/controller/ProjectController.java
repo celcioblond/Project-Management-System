@@ -4,6 +4,7 @@ import com.example.Project_Management.model.Project;
 import com.example.Project_Management.model.dto.ProjectCreate;
 import com.example.Project_Management.model.dto.ProjectResponse;
 import com.example.Project_Management.model.dto.ProjectUpdate;
+import com.example.Project_Management.service.JwtService;
 import com.example.Project_Management.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,9 +20,22 @@ public class ProjectController {
     @Autowired
     private ProjectService projectService;
 
+    @Autowired
+    private JwtService jwtService;
+
     @GetMapping("/projects")
     public ResponseEntity<List<ProjectResponse>> getAllProjectResponses(){
         List<ProjectResponse> projects = projectService.getAllProjectResponses();
+        return ResponseEntity.ok(projects);
+    }
+
+    @GetMapping("/projects/my-projects")
+    public ResponseEntity<List<ProjectResponse>> getMyProjects(@RequestHeader("Authorization") String token){
+
+        String jwt = token.substring(7);
+        String username = jwtService.extractUsername(jwt);
+
+        List<ProjectResponse> projects = projectService.getProjectsByUsername(username);
         return ResponseEntity.ok(projects);
     }
 

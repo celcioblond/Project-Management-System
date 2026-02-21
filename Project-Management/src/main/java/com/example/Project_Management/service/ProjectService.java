@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectService {
@@ -298,5 +299,14 @@ public class ProjectService {
                 projectCommentResponses,
                 project.getCreatedAt()
         );
+    }
+
+    public List<ProjectResponse> getProjectsByUsername(String username) {
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Project> projects = projectRepo.findByAssignedEmployee(user);
+
+        return projects.stream().map(this::convertToFullResponse).collect(Collectors.toList());
     }
 }
