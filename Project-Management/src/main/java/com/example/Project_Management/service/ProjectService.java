@@ -83,6 +83,7 @@ public class ProjectService {
             }
 
             ProjectResponse projectResponse = new ProjectResponse(
+                    project.getId(),
                     project.getName(),
                     project.getDescription(),
                     project.getStatus(),
@@ -288,6 +289,7 @@ public class ProjectService {
         }
 
         return new ProjectResponse(
+                project.getId(),
                 project.getName(),
                 project.getDescription(),
                 project.getStatus(),

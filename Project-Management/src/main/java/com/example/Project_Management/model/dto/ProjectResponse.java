@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record ProjectResponse(
+        Long id,
         String title,
         String description,
         String status,

@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import ProjectOverviewPage from './pages/ProjectOverviewPage';
 import Unauthorized from './pages/Unauthorized';
 
 function App() {
@@ -39,6 +40,14 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN']}>
             <EmployeeDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employee/dashboard/projects/:projectId"
+        element={
+          <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN']}>
+            <ProjectOverviewPage />
           </ProtectedRoute>
         }
       />

@@ -91,4 +91,12 @@ public class TaskCommentService {
                 comment.getUpdatedAt()
         );
     }
+
+    public List<TaskCommentResponse> getCommentsByUsername(String username) {
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        return taskCommentRepo.findByAuthorId(user.getId()).stream().map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
 }

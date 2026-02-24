@@ -94,4 +94,13 @@ public class ProjectCommentService {
                 comment.getUpdatedAt()
         );
     }
+
+    public List<ProjectCommentResponse> getCommentsByUsername(String username) {
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(()-> new RuntimeException("User not found: " + username));
+
+        return projectCommentRepo.findByAuthorId(user.getId()).stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
 }

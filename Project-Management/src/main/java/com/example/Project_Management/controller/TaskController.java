@@ -3,7 +3,9 @@ package com.example.Project_Management.controller;
 import com.example.Project_Management.model.dto.TaskCreate;
 import com.example.Project_Management.model.dto.TaskResponse;
 import com.example.Project_Management.model.dto.TaskUpdate;
+import com.example.Project_Management.service.JwtService;
 import com.example.Project_Management.service.TaskService;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +20,20 @@ public class TaskController {
     @Autowired
     private TaskService taskService;
 
+    @Autowired
+    private JwtService jwtService;
+
     @GetMapping("/tasks")
     public ResponseEntity<List<TaskResponse>> getAllTasks(){
         List<TaskResponse> tasks = taskService.getAllTasks();
+        return ResponseEntity.ok(tasks);
+    }
+
+    @GetMapping("/tasks/my-tasks")
+    public ResponseEntity<List<TaskResponse>> getMyTasks(@RequestHeader("Authorization") String token){
+        String  jwt = token.substring(7);
+        String username = jwtService.extractUsername(jwt);
+        List<TaskResponse> tasks = taskService.getTasksByUsername(username);
         return ResponseEntity.ok(tasks);
     }
 

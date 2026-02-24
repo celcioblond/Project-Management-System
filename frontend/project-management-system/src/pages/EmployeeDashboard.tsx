@@ -1,9 +1,10 @@
 // src/pages/EmployeeDashboard.tsx
 import { useEffect, useState } from 'react';
-import CardNote from '../components/CardNote';
+import { Link } from 'react-router-dom';
+import CardNote from '../components/EmployeeDashboard/CardNote';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
-import type {ProjectResponse} from '../services/api';
+import type { ProjectResponse } from '../services/api';
 
 const EmployeeDashboard = () => {
   const { user } = useAuth();
@@ -42,7 +43,7 @@ const EmployeeDashboard = () => {
 
   if (error) {
     return (
-      <div className="text">
+      <div className="text-5xl">
         <h1>Error displaying: {error}</h1>
       </div>
     );
@@ -76,15 +77,20 @@ const EmployeeDashboard = () => {
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fit,_minmax(280px,_1fr))] gap-4 xl:grid-cols-[repeat(auto-fit,_minmax(350px,_1fr))]">
-          {projects.map((project, index) => (
-            <CardNote
-              key={index}
-              title={project.title}
-              started={project.startDate}
-              due={project.endDate}
-              admin={project.createdByAdminName}
-              createdAt={project.createdAt}
-            />
+          {projects.map((project) => (
+            <Link
+              key={project.id}
+              to={`/employee/dashboard/projects/${project.id}`}
+              className="block h-full transition-opacity hover:opacity-95"
+            >
+              <CardNote
+                title={project.title}
+                started={project.startDate}
+                due={project.endDate}
+                admin={project.createdByAdminName}
+                createdAt={project.createdAt}
+              />
+            </Link>
           ))}
         </div>
       )}

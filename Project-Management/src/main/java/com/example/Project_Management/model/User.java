@@ -42,4 +42,5 @@ public class User {
 
     @OneToMany(mappedBy = "assignedEmployee", cascade = CascadeType.ALL)
     private List<Task> assignedTasks;
+
 }

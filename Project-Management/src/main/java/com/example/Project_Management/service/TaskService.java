@@ -157,4 +157,11 @@ public class TaskService {
                 task.getCreatedAt()
         );
     }
+
+    public List<TaskResponse> getTasksByUsername(String username) {
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return taskRepo.findByAssignedEmployeeId(user.getId()).stream().map(this::convertToTaskResponse)
+                .collect(Collectors.toList());
+    }
 }

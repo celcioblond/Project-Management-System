@@ -5,6 +5,7 @@ import com.example.Project_Management.model.dto.PasswordUpdate;
 import com.example.Project_Management.model.dto.UserCreate;
 import com.example.Project_Management.model.dto.UserResponse;
 import com.example.Project_Management.model.dto.UserUpdate;
+import com.example.Project_Management.service.JwtService;
 import com.example.Project_Management.service.UserService;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtService jwtService;
 
     @GetMapping("/users")
     public ResponseEntity<List<UserResponse>> getAllUsers(){
@@ -70,6 +74,18 @@ public class UserController {
     public ResponseEntity<Void> updatePassword(@PathVariable Long id, @RequestBody PasswordUpdate passwordUpdate) {
         userService.updatePassword(id, passwordUpdate.newPassword());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/projects/{projectId}/colleagues")
+    public ResponseEntity<List<UserResponse>> getColleaguesByProject(
+            @PathVariable Long projectId,
+            @RequestHeader("Authorization") String token) {
+
+        String jwt = token.substring(7);
+        String username = jwtService.extractUsername(jwt);
+
+        List<UserResponse> colleagues = userService.getColleaguesByProjectId(projectId, username);
+        return ResponseEntity.ok(colleagues);
     }
 
 

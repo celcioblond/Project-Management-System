@@ -8,4 +8,5 @@ import java.util.List;
 
 @Repository
 public interface TaskCommentRepo extends JpaRepository<TaskComment, Long> {
+    List<TaskComment> findByAuthorId(Long authorId);
 }

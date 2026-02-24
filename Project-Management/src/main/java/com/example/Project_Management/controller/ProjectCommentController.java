@@ -3,6 +3,7 @@ package com.example.Project_Management.controller;
 
 import com.example.Project_Management.model.dto.ProjectCommentCreate;
 import com.example.Project_Management.model.dto.ProjectCommentResponse;
+import com.example.Project_Management.service.JwtService;
 import com.example.Project_Management.service.ProjectCommentService;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,12 +17,24 @@ import java.util.List;
 public class ProjectCommentController {
 
     @Autowired
-    ProjectCommentService projectCommentService;
+    private ProjectCommentService projectCommentService;
+
+    @Autowired
+    private JwtService jwtService;
 
     //Get all comments
     @GetMapping("/projects/{authorId}/comments")
     public ResponseEntity<List<ProjectCommentResponse>> getAllProjectComments(@PathVariable long authorId) {
-        ;List<ProjectCommentResponse> comments = projectCommentService.getAllProjectComments(authorId);
+        List<ProjectCommentResponse> comments = projectCommentService.getAllProjectComments(authorId);
+        return ResponseEntity.ok(comments);
+    }
+
+    @GetMapping("project-comments/my-comments")
+    public ResponseEntity<List<ProjectCommentResponse>> getMyProjectComments(@RequestHeader ("Authorization") String token) {
+        String jwt = token.substring(7);
+        String username = jwtService.extractUsername(jwt);
+
+        List<ProjectCommentResponse> comments = projectCommentService.getCommentsByUsername(username);
         return ResponseEntity.ok(comments);
     }
 

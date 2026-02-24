@@ -173,4 +173,10 @@ public class UserService {
                 user.getRole()
         );
     }
+
+    public List<UserResponse> getColleaguesByProjectId(Long projectId, String username) {
+        return userRepo.findColleaguesByProjectId(projectId, username).stream()
+                .map(this::convertToUserResponse)
+                .collect(Collectors.toList());
+    }
 }

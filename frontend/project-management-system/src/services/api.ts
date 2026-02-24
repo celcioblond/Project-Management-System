@@ -42,6 +42,7 @@ export interface TaskResponse {
 }
 
 export interface ProjectResponse {
+  id: number;
   title: string;
   description: string;
   status: string;
@@ -52,6 +53,16 @@ export interface ProjectResponse {
   tasks: TaskResponse[];
   comments: CommentResponse[];
   createdAt: string;
+}
+
+export interface UserResponse {
+  id: number;
+  name: string;
+  email: string;
+  username: string;
+  position: string;
+  department: string;
+  role: string;
 }
 
 class ApiService {
@@ -103,6 +114,66 @@ class ApiService {
       return response.data;
     } catch (error) {
       throw new Error('Failed to fetch projects: ' + String(error));
+    }
+  }
+
+  async getMyColleagues(projectId: number): Promise<UserResponse[]> {
+    try {
+      const response = await axios.get<UserResponse[]>(
+        `${this.baseUrl}/projects/${projectId}/colleagues`,
+        { headers: this.getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error("Failed to fetch colleagues : " + String(error));
+    }
+  }
+
+  async getMyTasks(): Promise<TaskResponse[]> {
+    try {
+      const response = await axios.get<TaskResponse[]>(
+        `${this.baseUrl}/tasks/my-tasks`,
+        { headers: this.getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error("Failed to fetch tasks : " + String(error));
+    }
+  }
+
+  async getMyProjectComments(): Promise<CommentResponse[]> {
+    try {
+      const response = await axios.get<CommentResponse[]>(
+        `${this.baseUrl}/project-comments/my-comments`,
+        { headers: this.getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error("Failed to fetch project comments: " + String(error));
+    }
+  }
+
+  async getMyTaskComments(): Promise<CommentResponse[]> {
+    try {
+      const response = await axios.get<CommentResponse[]>(
+        `${this.baseUrl}/tasks-comments/my-comments`,
+        { headers: this.getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error("Failed to fetch task comments: " + String(error));
+    }
+  }
+
+  async getProjectById(id: number): Promise<ProjectResponse> {
+    try {
+      const response = await axios.get<ProjectResponse>(
+        `${this.baseUrl}/projects/${id}`,
+        { headers: this.getAuthHeaders()}
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error("Failed to fetch project by id " + String(error));
     }
   }
 }
