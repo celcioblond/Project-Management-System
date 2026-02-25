@@ -14,7 +14,7 @@ public record TaskResponse(
         String status,
         LocalDateTime dueDate,
         String projectName,
-        String assignedEmployeeName,
+        List<String> assignedEmployeeNames,
         String assignedByAdminName,
         List<TaskCommentResponse> comments,
         LocalDateTime createdAt

@@ -1,6 +1,7 @@
 package com.example.Project_Management.model.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record TaskCreate(
         String title,
@@ -9,7 +10,7 @@ public record TaskCreate(
         String priority,
         LocalDateTime dueDate,
         Long projectId,
-        Long assignedEmployeeId,
+        List<Long> assignedEmployeeIds,
         Long assignedByAdminId
 ) {
 }

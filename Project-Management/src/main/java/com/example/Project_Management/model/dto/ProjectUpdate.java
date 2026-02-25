@@ -9,7 +9,7 @@ public record ProjectUpdate(
         String status,
         LocalDateTime startDate,
         LocalDateTime endDate,
-        Long assignedEmployeeId,
+        List<Long> assignedEmployeeIds,
         Long updatedByAdminId,
         List<TaskCreate> newTasks
 ) {

@@ -8,9 +8,9 @@ const ProjectTeamCard = ({ members }: ProjectTeamCardProps) => {
 
   if (!members || members.length === 0) {
     return (
-      <p>
-        No members found
-      </p>
+      <div className="bg-emerald-600 p-3">
+        <p>No members found</p>
+      </div>
     )
   }
 

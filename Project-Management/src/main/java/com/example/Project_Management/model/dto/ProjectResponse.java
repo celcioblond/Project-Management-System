@@ -12,7 +12,7 @@ public record ProjectResponse(
         String status,
         LocalDateTime startDate,
         LocalDateTime endDate,
-        String assignedEmployeeName,
+        List<String> assignedEmployeeNames,
         String createdByAdminName,
         List<TaskResponse> tasks,
         List<ProjectCommentResponse> comments,

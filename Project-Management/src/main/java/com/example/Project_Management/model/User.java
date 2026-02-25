@@ -11,7 +11,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name="users")
+@Table(name = "users")
 public class User {
 
     @Id
@@ -34,13 +34,11 @@ public class User {
 
     private String position;
     private String department;
-
     private String role;
 
-    @OneToMany(mappedBy = "assignedEmployee", cascade = CascadeType.ALL)
+    @ManyToMany(mappedBy = "assignedEmployees")
     private List<Project> assignedProjects;
 
-    @OneToMany(mappedBy = "assignedEmployee", cascade = CascadeType.ALL)
+    @ManyToMany(mappedBy = "assignedEmployees")
     private List<Task> assignedTasks;
-
 }

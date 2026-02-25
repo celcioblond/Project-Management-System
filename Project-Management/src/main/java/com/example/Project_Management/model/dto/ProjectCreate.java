@@ -10,7 +10,7 @@ public record ProjectCreate(
         String status,
         LocalDateTime startDate,
         LocalDateTime endDate,
-        Long assignedEmployeeId,
+        List<Long> assignedEmployeeIds,
         Long createdByAdminId,
         List<TaskCreate> tasks,
         List<String> comments

@@ -35,7 +35,7 @@ export interface TaskResponse {
   status: string;
   dueDate: string;
   projectName: string;
-  assignedEmployeeName: string;
+  assignedEmployeeNames: string[];
   assignedByAdminName: string;
   comments: CommentResponse[];
   createdAt: string;
@@ -48,7 +48,7 @@ export interface ProjectResponse {
   status: string;
   startDate: string;
   endDate: string;
-  assignedEmployeeName: string;
+  assignedEmployeeNames: string[];
   createdByAdminName: string;
   tasks: TaskResponse[];
   comments: CommentResponse[];

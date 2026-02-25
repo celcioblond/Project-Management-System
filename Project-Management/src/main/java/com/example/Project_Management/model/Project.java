@@ -13,7 +13,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name="projects")
+@Table(name = "projects")
 public class Project {
 
     @Id
@@ -27,16 +27,19 @@ public class Project {
     private String description;
 
     private String status;
-
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="assigned_employee_id")
-    private User assignedEmployee;
+    @ManyToMany
+    @JoinTable(
+            name = "project_users",
+            joinColumns = @JoinColumn(name = "project_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private List<User> assignedEmployees;  // many users per project
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="created_by_admin_id", nullable = false)
+    @JoinColumn(name = "created_by_admin_id", nullable = false)
     private User createdByAdmin;
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)

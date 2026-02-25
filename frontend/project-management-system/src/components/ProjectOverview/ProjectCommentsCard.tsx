@@ -8,8 +8,10 @@ const ProjectCommentCard = ({comments} : ProjectCommentCardProps) => {
 
   if (!comments || comments.length === 0) {
     return (
-      <p>No comments found</p>
-    )
+      <div className="bg-pink-500 text-black p-3">
+        <p>No comments found</p>
+      </div>
+    );
   }
 
   return (

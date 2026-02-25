@@ -9,8 +9,10 @@ const MyTasksCard = ({tasks} : MyTasksCardProps) => {
 
   if (!tasks || tasks.length === 0) {
     return (
-      <p>No tasks available</p>
-    )
+      <div className="bg-amber-950 text-white p-3">
+        <p>No tasks available</p>
+      </div>
+    );
   }
 
   return (

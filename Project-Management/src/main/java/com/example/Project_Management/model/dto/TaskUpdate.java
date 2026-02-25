@@ -1,6 +1,7 @@
 package com.example.Project_Management.model.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record TaskUpdate(
         String title,
@@ -9,6 +10,6 @@ public record TaskUpdate(
         String priority,
         LocalDateTime dueDate,
         Long updatedByAdminId,
-        Long assignedEmployeeId
+        List<Long> assignedEmployeeIds
 ) {
 }
