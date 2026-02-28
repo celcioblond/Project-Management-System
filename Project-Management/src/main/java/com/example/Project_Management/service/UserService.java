@@ -58,6 +58,7 @@ public class UserService {
 
         User user = new User();
         user.setName(userCreate.name());
+        user.setUsername(userCreate.username());
         user.setAge(userCreate.age());
         user.setEmail(userCreate.email());
         user.setPassword(userCreate.password());  // TODO: Hash password when adding Spring Security
@@ -94,7 +95,7 @@ public class UserService {
         }
 
         if (userUpdate.department()!=null){
-            user.setPosition(userUpdate.position());
+            user.setPosition(userUpdate.department());
         }
 
         if(userUpdate.role()!=null){

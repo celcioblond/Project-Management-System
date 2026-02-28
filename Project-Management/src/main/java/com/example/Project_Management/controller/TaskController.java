@@ -37,12 +37,6 @@ public class TaskController {
         return ResponseEntity.ok(tasks);
     }
 
-    @GetMapping("/tasks/{id}")
-    public ResponseEntity<TaskResponse> getTaskById(@PathVariable int id){
-        TaskResponse task = taskService.getTaskById(id);
-        return ResponseEntity.ok(task);
-    }
-
     @GetMapping("/projects/{projectId}/tasks")
     public ResponseEntity<List<TaskResponse>> getTasksByProject(@PathVariable long projectId){
         List<TaskResponse> tasks = taskService.getTasksByProjectById(projectId);

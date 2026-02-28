@@ -46,12 +46,6 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @GetMapping("/users/role/{role}")
-    public ResponseEntity<List<UserResponse>> getUserByRole(@PathVariable String role) {
-        List<UserResponse> users = userService.getUsersByRole(role);
-        return ResponseEntity.ok(users);
-    }
-
     @PostMapping("/users")
     public ResponseEntity<UserResponse> createUser(@RequestBody UserCreate userCreate){
         UserResponse userResponse = userService.createUser(userCreate);
