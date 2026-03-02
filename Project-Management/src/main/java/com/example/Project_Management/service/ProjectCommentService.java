@@ -30,8 +30,8 @@ public class ProjectCommentService {
     @Autowired
     private UserRepo userRepo;
 
-    public List<ProjectCommentResponse> getAllProjectComments(Long authorId) {
-        return projectCommentRepo.findByAuthorId(authorId).stream()
+    public List<ProjectCommentResponse> getAllProjectComments(Long projectId) {
+        return projectCommentRepo.findByProjectId(projectId).stream()  // already exists!
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }

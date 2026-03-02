@@ -65,4 +65,24 @@ public class ProjectController {
         projectService.deleteProject(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/project/generate-project")
+    public ResponseEntity<String> generateProject(@RequestParam String name, @RequestParam String type){
+        try {
+            String aiDesc = projectService.generateProject(name, type);
+            return new ResponseEntity<>(aiDesc, HttpStatus.OK);
+        } catch(Exception e){
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/project/generate-diagram")
+    public ResponseEntity<?> generateDiagram(@RequestParam String name, @RequestParam String type, @RequestParam String description){
+        try {
+            byte[] aiDiagram  = projectService.generateImage(name, type, description);
+            return new ResponseEntity<>(aiDiagram, HttpStatus.OK);
+        } catch (Exception e){
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

@@ -6,6 +6,7 @@ import com.example.Project_Management.model.dto.*;
 import com.example.Project_Management.repo.ProjectRepo;
 import com.example.Project_Management.repo.TaskRepo;
 import com.example.Project_Management.repo.UserRepo;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,8 @@ public class ProjectService {
     @Autowired private ProjectRepo projectRepo;
     @Autowired private UserRepo userRepo;
     @Autowired private TaskRepo taskRepo;
+    @Autowired private ChatClient chatClient;
+    @Autowired private AiImageGeneratorService aiImageGeneratorService;
 
     public List<ProjectResponse> getAllProjectResponses() {
         return projectRepo.findAll().stream()
@@ -209,5 +212,40 @@ public class ProjectService {
         return projectRepo.findByAssignedEmployee(user).stream()
                 .map(this::convertToFullResponse)
                 .collect(Collectors.toList());
+    }
+
+    public String generateProject(String name, String type) {
+
+        String descPrompt = String.format("""
+                Write a concise and professional project title for a project management system.
+                
+                Project Title: %s
+                Category: %s
+                
+                """, name, type);
+
+        String title = chatClient.prompt(descPrompt).call().chatResponse().getResult().getOutput().getText();
+
+        return title;
+    }
+
+    public byte[] generateImage(String name, String type, String description) {
+        String imagePrompt = String.format("""
+                Generate a realistic accurate diagram, that follow the next details:
+                
+                Project details:
+                - Type: %s
+                - Name: %s
+                - Description: %s
+                
+                Requirements: 
+                - Ensure it follows the project type, if it's a construction engineer
+                 project then make a diagram that represents how the workflow of the project
+                 would be within that specific engineer field.             
+                
+                """, type, name, description);
+
+        byte[] aiImage = aiImageGeneratorService.generateImage(imagePrompt);
+        return aiImage;
     }
 }
