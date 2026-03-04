@@ -7,6 +7,9 @@ import {
   Activity,
   Calendar,
   Search,
+  Tag,
+  Sparkles,
+  ImageIcon,
 } from 'lucide-react';
 import { sileo } from 'sileo';
 import {
@@ -40,6 +43,7 @@ interface EditProjectModalProps {
 
 interface FormState {
   name: string;
+  type: string;
   description: string;
   status: string;
   startDate: string;
@@ -156,6 +160,30 @@ function IconSelect({
   );
 }
 
+function Spinner({ className = 'w-3 h-3' }: { className?: string }) {
+  return (
+    <svg
+      className={`animate-spin ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8z"
+      />
+    </svg>
+  );
+}
+
 // ─── Helper: convert ISO datetime string → date input value (YYYY-MM-DD) ──────
 
 function toDateInput(iso: string): string {
@@ -175,6 +203,7 @@ export default function EditProjectModal({
 }: EditProjectModalProps) {
   const [form, setForm] = useState<FormState>({
     name: '',
+    type: '',
     description: '',
     status: '',
     startDate: '',
@@ -185,11 +214,23 @@ export default function EditProjectModal({
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // ── AI description ─────────────────────────────────────────────────────────
+  const [generating, setGenerating] = useState(false);
+
+  // ── AI diagram ─────────────────────────────────────────────────────────────
+  const [generatingDiagram, setGeneratingDiagram] = useState(false);
+  const [diagramBlob, setDiagramBlob] = useState<Blob | null>(null);
+  const [diagramPreviewUrl, setDiagramPreviewUrl] = useState<string | null>(
+    null,
+  );
+  const [diagramRemoved, setDiagramRemoved] = useState(false);
+
   // Pre-populate form whenever a project is passed in
   useEffect(() => {
     if (open && project) {
       setForm({
         name: project.title ?? '',
+        type: (project as any).type ?? '',
         description: project.description ?? '',
         status: project.status ?? '',
         startDate: toDateInput(project.startDate),
@@ -202,10 +243,19 @@ export default function EditProjectModal({
         .map((e) => e.id);
       setSelectedIds(preSelected);
 
+      // Existing diagram from backend (base64 string)
+      if (project.projectDiagram && !diagramRemoved) {
+        setDiagramPreviewUrl(`data:image/jpeg;base64,${project.projectDiagram}`);
+      } else {
+        setDiagramPreviewUrl(null);
+      }
+      setDiagramBlob(null);
+      setDiagramRemoved(false);
+
       setErrors({});
       setSearch('');
     }
-  }, [open, project, employees]);
+  }, [open, project, employees, diagramRemoved]);
 
   // Close on Escape
   useEffect(() => {
@@ -235,12 +285,93 @@ export default function EditProjectModal({
         e.username.toLowerCase().includes(search.toLowerCase())),
   );
 
+  // ── Gate conditions (same pattern as CreateProjectModal) ───────────────────
+  const canGenerateDescription = !!form.name.trim() && !!form.type.trim();
+  const canGenerateDiagram =
+    !!form.name.trim() && !!form.type.trim() && !!form.description.trim();
+
+  // ── AI description handler ─────────────────────────────────────────────────
+
+  const handleGenerateDescription = async () => {
+    if (!canGenerateDescription) {
+      sileo.error({
+        title: 'Missing fields',
+        description: 'Enter a project name and type before generating.',
+      });
+      return;
+    }
+    setGenerating(true);
+    try {
+      const desc = await apiService.generateProject(
+        form.name.trim(),
+        form.type.trim(),
+      );
+      set('description', desc);
+      sileo.success({
+        title: 'Description generated',
+        description: 'Feel free to edit it before saving.',
+      });
+    } catch (e) {
+      sileo.error({ title: 'Generation failed', description: String(e) });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // ── AI diagram handler ─────────────────────────────────────────────────────
+
+  const handleGenerateDiagram = async () => {
+    if (!canGenerateDiagram) {
+      sileo.error({
+        title: 'Missing fields',
+        description:
+          'Name, type, and description are all required to generate a diagram.',
+      });
+      return;
+    }
+    setGeneratingDiagram(true);
+    try {
+      const blob = await apiService.generateDiagram(
+        form.name.trim(),
+        form.type.trim(),
+        form.description.trim(),
+      );
+
+      if (diagramPreviewUrl && !diagramPreviewUrl.startsWith('data:')) {
+        URL.revokeObjectURL(diagramPreviewUrl);
+      }
+
+      const url = URL.createObjectURL(blob);
+      setDiagramBlob(blob);
+      setDiagramPreviewUrl(url);
+      setDiagramRemoved(false);
+      sileo.success({ title: 'Diagram generated' });
+    } catch (e) {
+      sileo.error({
+        title: 'Failed to generate diagram',
+        description: String(e),
+      });
+    } finally {
+      setGeneratingDiagram(false);
+    }
+  };
+
+  const handleRemoveDiagram = () => {
+    if (diagramPreviewUrl && !diagramPreviewUrl.startsWith('data:')) {
+      URL.revokeObjectURL(diagramPreviewUrl);
+    }
+    setDiagramBlob(null);
+    setDiagramPreviewUrl(null);
+    setDiagramRemoved(true);
+  };
+
   // ── Validation ────────────────────────────────────────────────────────────
 
   const validate = (): boolean => {
     const e: Partial<FormState> = {};
 
     if (!form.name.trim()) e.name = 'Project name is required.';
+    if (!form.type.trim()) e.type = 'Project type is required.';
     if (!form.status) e.status = 'Select a status.';
     if (!form.startDate) e.startDate = 'Start date is required.';
     if (!form.endDate) e.endDate = 'End date is required.';
@@ -261,14 +392,29 @@ export default function EditProjectModal({
 
     const toISO = (d: string) => `${d}T00:00:00`;
 
+    // Convert blob → base64 to send as JSON field (same pattern as CreateProjectModal)
+    let diagramBase64: string | null = null;
+    if (diagramBlob) {
+      const buffer = await diagramBlob.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      diagramBase64 = btoa(
+        bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), ''),
+      );
+    }
+
     const payload: ProjectUpdate = {
       name: form.name.trim(),
+      type: form.type.trim(),
       description: form.description.trim(),
       status: form.status,
       startDate: toISO(form.startDate),
       endDate: toISO(form.endDate),
       assignedEmployeeIds: selectedIds,
       updatedByAdminId: adminId,
+      projectDiagram:
+        diagramRemoved && !diagramBase64
+          ? null
+          : diagramBase64 ?? project.projectDiagram ?? undefined,
     };
 
     setSubmitting(true);
@@ -327,6 +473,18 @@ export default function EditProjectModal({
             />
           </Field>
 
+          <Field label="Project Type:" error={errors.type}>
+            <IconInput
+              icon={Tag}
+              placeholder="e.g. Construction Engineering"
+              value={form.type}
+              onChange={(v) => set('type', v)}
+              disabled={submitting}
+              hasError={!!errors.type}
+            />
+          </Field>
+
+          {/* Description with AI generate button */}
           <Field label="Description:">
             <div className="flex items-start gap-2.5 border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400 transition-colors">
               <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
@@ -334,11 +492,71 @@ export default function EditProjectModal({
                 placeholder="Brief description (optional)"
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
-                disabled={submitting}
+                disabled={submitting || generating}
                 rows={3}
                 className="flex-1 text-sm bg-transparent outline-none text-slate-800 placeholder:text-slate-400 disabled:opacity-50 resize-none"
               />
             </div>
+            <button
+              onClick={handleGenerateDescription}
+              disabled={submitting || generating || !canGenerateDescription}
+              className="self-start mt-1.5 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {generating ? <Spinner /> : <Sparkles className="w-3 h-3" />}
+              {generating ? 'Generating…' : 'AI Generate'}
+            </button>
+            {!canGenerateDescription && (
+              <p className="text-xs text-slate-400">
+                Fill in name and type to enable AI description generation.
+              </p>
+            )}
+          </Field>
+
+          {/* Diagram with AI generate button + preview */}
+          <Field label="Diagram:">
+            <button
+              onClick={handleGenerateDiagram}
+              disabled={submitting || generatingDiagram || !canGenerateDiagram}
+              className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {generatingDiagram ? (
+                <Spinner />
+              ) : (
+                <ImageIcon className="w-3 h-3" />
+              )}
+              {generatingDiagram ? 'Generating…' : 'AI Generate Diagram'}
+            </button>
+
+            {!canGenerateDiagram && (
+              <p className="text-xs text-slate-400">
+                Fill in name, type, and description to enable diagram generation.
+              </p>
+            )}
+
+            {diagramPreviewUrl && (
+              <div className="mt-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-slate-500">
+                    Project Diagram Preview:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRemoveDiagram}
+                    disabled={submitting}
+                    className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors disabled:opacity-40"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="border border-slate-200 rounded-lg p-2 bg-slate-50">
+                  <img
+                    src={diagramPreviewUrl}
+                    alt="Project Diagram"
+                    className="w-full rounded object-contain max-h-52"
+                  />
+                </div>
+              </div>
+            )}
           </Field>
 
           <Field label="Status:" error={errors.status}>
@@ -461,27 +679,7 @@ export default function EditProjectModal({
             disabled={submitting || adminId === null}
             className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold transition-all duration-150 disabled:opacity-60 flex items-center gap-2"
           >
-            {submitting && (
-              <svg
-                className="animate-spin w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8z"
-                />
-              </svg>
-            )}
+            {submitting && <Spinner className="w-4 h-4" />}
             {submitting ? 'Saving…' : 'Save Changes'}
           </button>
         </div>

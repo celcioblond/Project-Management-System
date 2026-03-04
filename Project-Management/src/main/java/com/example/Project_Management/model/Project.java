@@ -26,6 +26,9 @@ public class Project {
     @Column(nullable = false)
     private String description;
 
+    @Column
+    private String type;
+
     private String status;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
@@ -50,4 +53,9 @@ public class Project {
 
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(columnDefinition = "BYTEA")
+    private byte[] projectDiagram;
+
+
 }

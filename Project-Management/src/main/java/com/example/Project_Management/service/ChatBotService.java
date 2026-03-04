@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
@@ -27,8 +26,7 @@ public class ChatBotService {
     @Autowired
     private ChatClient chatClient;
 
-    public String getBotResponse(String userQuery){
-
+    public String getBotResponse(String userQuery, String username) {
         try {
             String promptStringTemplate = Files.readString(
                     resourceLoader.getResource("classpath:prompts/chatbot-rag-prompt.st")
@@ -41,6 +39,7 @@ public class ChatBotService {
             Map<String, Object> variables = new HashMap<>();
             variables.put("userQuery", userQuery);
             variables.put("context", context);
+            variables.put("username", username);
 
             PromptTemplate promptTemplate = PromptTemplate.builder()
                     .template(promptStringTemplate)
@@ -49,25 +48,23 @@ public class ChatBotService {
 
             return chatClient.prompt(promptTemplate.create()).call().content();
         } catch (Exception e) {
-            return "Bot Failed" + e.getMessage();
+            return "Bot Failed: " + e.getMessage();
         }
     }
 
     private String fetchSemanticContext(String userQuery) {
-
         List<Document> documents = vectorStore.similaritySearch(
                 SearchRequest.builder()
                         .query(userQuery)
-                        .topK(5)
-                        .similarityThreshold(0.7)
+                        .topK(20)
+                        .similarityThreshold(0.3)
                         .build()
         );
 
         StringBuilder context = new StringBuilder();
-        for (Document document: documents) {
-            context.append(document.getFormattedContent()).append("\n");
+        for (Document document : documents) {
+            context.append(document.getFormattedContent()).append("\n---\n");
         }
         return context.toString();
     }
-
 }

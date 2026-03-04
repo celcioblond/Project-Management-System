@@ -6,11 +6,13 @@ import java.util.List;
 public record ProjectUpdate(
         String name,
         String description,
+        String type,
         String status,
         LocalDateTime startDate,
         LocalDateTime endDate,
         List<Long> assignedEmployeeIds,
         Long updatedByAdminId,
-        List<TaskCreate> newTasks
+        List<TaskCreate> newTasks,
+        byte[] projectDiagram
 ) {
 }

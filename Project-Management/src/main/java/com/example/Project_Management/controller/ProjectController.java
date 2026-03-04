@@ -1,9 +1,7 @@
 package com.example.Project_Management.controller;
 
 import com.example.Project_Management.model.Project;
-import com.example.Project_Management.model.dto.ProjectCreate;
-import com.example.Project_Management.model.dto.ProjectResponse;
-import com.example.Project_Management.model.dto.ProjectUpdate;
+import com.example.Project_Management.model.dto.*;
 import com.example.Project_Management.service.JwtService;
 import com.example.Project_Management.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,9 +65,9 @@ public class ProjectController {
     }
 
     @PostMapping("/project/generate-project")
-    public ResponseEntity<String> generateProject(@RequestParam String name, @RequestParam String type){
+    public ResponseEntity<String> generateProject(@RequestBody GenerateProject request){
         try {
-            String aiDesc = projectService.generateProject(name, type);
+            String aiDesc = projectService.generateProject(request.name(), request.type());
             return new ResponseEntity<>(aiDesc, HttpStatus.OK);
         } catch(Exception e){
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -77,9 +75,9 @@ public class ProjectController {
     }
 
     @PostMapping("/project/generate-diagram")
-    public ResponseEntity<?> generateDiagram(@RequestParam String name, @RequestParam String type, @RequestParam String description){
+    public ResponseEntity<?> generateDiagram(@RequestBody GenerateDiagram request){
         try {
-            byte[] aiDiagram  = projectService.generateImage(name, type, description);
+            byte[] aiDiagram  = projectService.generateImage(request.title(), request.type(), request.description());
             return new ResponseEntity<>(aiDiagram, HttpStatus.OK);
         } catch (Exception e){
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);

@@ -19,9 +19,9 @@ public class ChatBotController {
     private ChatBotService chatBotService;
 
     @GetMapping("/chat/ask")
-    public ResponseEntity<String> askBot(@RequestParam String message) throws IOException {
+    public ResponseEntity<String> askBot(@RequestParam String userQuery, @RequestParam String username) throws IOException {
 
-        String response = chatBotService.getBotResponse(message);
+        String response = chatBotService.getBotResponse(userQuery, username);
 
         return ResponseEntity.ok(response);
     }

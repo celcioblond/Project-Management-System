@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Flag,
   CircleDot,
+  ImageIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -929,8 +930,35 @@ export default function ProjectOverviewPage() {
             </div>
           </div>
 
-          {/* Sidebar: Team + Comments */}
+          {/* Sidebar: Diagram + Team + Comments */}
           <div className="space-y-6">
+            {/* Project diagram */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                <ImageIcon className="w-3.5 h-3.5" /> Project Diagram
+              </h2>
+              {project.projectDiagram ? (
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                  <img
+                    src={`data:image/jpeg;base64,${project.projectDiagram}`}
+                    alt="Project diagram"
+                    className="w-full h-auto max-h-80 object-contain bg-slate-50"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-slate-400">
+                  <ImageIcon className="w-8 h-8 opacity-40" />
+                  <p className="text-sm font-medium">No diagram available yet</p>
+                  {isAdmin && (
+                    <p className="text-xs text-slate-400 text-center max-w-xs">
+                      Edit this project in the admin dashboard to generate a
+                      diagram with AI.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Team members */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">

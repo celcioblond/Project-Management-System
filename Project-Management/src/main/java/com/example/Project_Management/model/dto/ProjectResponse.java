@@ -9,6 +9,7 @@ public record ProjectResponse(
         Long id,
         String title,
         String description,
+        String type,
         String status,
         LocalDateTime startDate,
         LocalDateTime endDate,
@@ -16,6 +17,7 @@ public record ProjectResponse(
         String createdByAdminName,
         List<TaskResponse> tasks,
         List<ProjectCommentResponse> comments,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        byte[] projectDiagram
 ) {
 }

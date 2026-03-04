@@ -51,6 +51,7 @@ export interface ProjectResponse {
   id: number;
   title: string;
   description: string;
+  type: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -59,6 +60,7 @@ export interface ProjectResponse {
   tasks: TaskResponse[];
   comments: CommentResponse[];
   createdAt: string;
+  projectDiagram?: string | null;
 }
 
 export interface UserResponse {
@@ -97,6 +99,7 @@ export interface UserUpdate {
 export interface ProjectCreate{
   name: string;
   description: string;
+  type: string;
   status: string;
   startDate: string;     // ISO LocalDateTime string e.g. "2025-01-15T00:00:00"
   endDate: string;
@@ -104,17 +107,20 @@ export interface ProjectCreate{
   createdByAdminId: number;
   tasks?: TaskCreate[];
   comments?: string[];
+  projectDiagram?: string | null;
 }
 
 export interface ProjectUpdate{
   name?: string;
   description?: string;
+  type?: string;
   status?: string;
   startDate?: string;
   endDate?: string;
   assignedEmployeeIds?: number[];
   updatedByAdminId?: number;
   newTasks?: TaskCreate[];
+  projectDiagram?: string | null;
 }
 
 export interface TaskCreate{
@@ -268,9 +274,9 @@ class ApiService {
   }
 
   //PROJECTS CRUD
-  async getAllProjects(): Promise<ProjectResponse> {
+  async getAllProjects(): Promise<ProjectResponse[]> {
     try{
-      const response = await axios.get<ProjectResponse>(
+      const response = await axios.get<ProjectResponse[]>(
         `${this.baseUrl}/projects`,
         {headers: this.getAuthHeaders()},
       );
@@ -404,9 +410,9 @@ class ApiService {
 
   //Users CRUD
 
-  async getAllUsers(): Promise<UserResponse>{
+  async getAllUsers(): Promise<UserResponse[]>{
     try {
-      const response = await axios.get<UserResponse>(
+      const response = await axios.get<UserResponse[]>(
         `${this.baseUrl}/users`,
         {headers: this.getAuthHeaders()},
       );
@@ -589,6 +595,55 @@ class ApiService {
       throw new Error("Failed to delete task comment: " + String(error));
     }
   }
+
+  //ChatBot and diagram generation (AI endpoints)
+  async generateProject(name: string, type: string): Promise<string>{
+    try {
+      const response = await axios.post<string>(
+        `${this.baseUrl}/project/generate-project`,
+        {
+          name: name,
+          type: type,
+        }, {
+          headers: this.getAuthHeaders()
+        },
+      );
+      return response.data;
+    } catch(error){
+      throw new Error("Failed to generate description: " + String(error));
+    }
+  }
+
+  async generateDiagram(name: string, type: string, description: string): Promise<Blob>{
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/project/generate-diagram`,
+        {title: name, type, description}, 
+        {headers: this.getAuthHeaders(),
+        responseType: 'arraybuffer'}
+      );
+      return new Blob([response.data], {type: 'image/jpeg'});
+    } catch(error) {
+      throw new Error("Failed to generate diagram: " + String(error));
+    }
+  }
+
+  async askBot(userQuery: string, username: string): Promise<string> {
+  try {
+    const response = await axios.get<string>(
+      `${this.baseUrl}/chat/ask`,
+      {
+        params: { userQuery, username },
+        headers: this.getAuthHeaders(),
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error("Failed to chat with bot: " + String(error));
+  }
+}
+
+
 }
 
 export const apiService = new ApiService(API_BASE_URL);

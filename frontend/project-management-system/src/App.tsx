@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ProjectOverviewPage from './pages/ProjectOverviewPage';
+import TaskOverviewPage from './pages/TaskOverviewPage';
 import Unauthorized from './pages/Unauthorized';
 
 function App() {
@@ -48,6 +49,14 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN']}>
             <ProjectOverviewPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employee/dashboard/tasks/:taskId"
+        element={
+          <ProtectedRoute allowedRoles={['EMPLOYEE', 'ADMIN']}>
+            <TaskOverviewPage />
           </ProtectedRoute>
         }
       />

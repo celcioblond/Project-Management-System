@@ -6,8 +6,10 @@ import {
   AlignLeft,
   Activity,
   Calendar,
-  Users,
   Search,
+  Tag,
+  Sparkles,
+  ImageIcon,
 } from 'lucide-react';
 import { sileo } from 'sileo';
 import {
@@ -31,14 +33,15 @@ const STATUS_LABELS: Record<string, string> = {
 
 interface CreateProjectModalProps {
   open: boolean;
-  adminId: number | null; // current admin's id — required by the API
-  employees: UserResponse[]; // full user list to pick assignees from
+  adminId: number | null;
+  employees: UserResponse[];
   onClose: () => void;
   onCreated: () => void;
 }
 
 interface FormState {
   name: string;
+  type: string;
   description: string;
   status: string;
   startDate: string;
@@ -47,13 +50,14 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   name: '',
+  type: '',
   description: '',
   status: '',
   startDate: '',
   endDate: '',
 };
 
-// ─── Shared sub-components (same as user modals) ──────────────────────────────
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function Field({
   label,
@@ -163,6 +167,30 @@ function IconSelect({
   );
 }
 
+function Spinner({ className = 'w-3 h-3' }: { className?: string }) {
+  return (
+    <svg
+      className={`animate-spin ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8z"
+      />
+    </svg>
+  );
+}
+
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
 export default function CreateProjectModal({
@@ -180,6 +208,16 @@ export default function CreateProjectModal({
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // ── AI description ───────────────────────────────────────────────────────
+  const [generating, setGenerating] = useState(false);
+
+  // ── AI diagram ───────────────────────────────────────────────────────────
+  const [generatingDiagram, setGeneratingDiagram] = useState(false);
+  const [diagramBlob, setDiagramBlob] = useState<Blob | null>(null);
+  const [diagramPreviewUrl, setDiagramPreviewUrl] = useState<string | null>(
+    null,
+  );
+
   // Reset on open
   useEffect(() => {
     if (open) {
@@ -187,8 +225,17 @@ export default function CreateProjectModal({
       setErrors({});
       setSelectedIds([]);
       setSearch('');
+      setDiagramBlob(null);
+      setDiagramPreviewUrl(null);
     }
   }, [open]);
+
+  // Revoke object URL on cleanup to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (diagramPreviewUrl) URL.revokeObjectURL(diagramPreviewUrl);
+    };
+  }, [diagramPreviewUrl]);
 
   // Close on Escape
   useEffect(() => {
@@ -212,7 +259,6 @@ export default function CreateProjectModal({
     setErrors((p) => ({ ...p, assignees: undefined }));
   };
 
-  // Filter employees — only show EMPLOYEE role, apply search
   const filteredEmployees = employees.filter(
     (e) =>
       e.role === 'EMPLOYEE' &&
@@ -220,12 +266,84 @@ export default function CreateProjectModal({
         e.username.toLowerCase().includes(search.toLowerCase())),
   );
 
+  // ── Gate conditions (same pattern as canGenerateDescription / canGenerateImage in AddProduct) ──
+  const canGenerateDescription = !!form.name.trim() && !!form.type.trim();
+  const canGenerateDiagram =
+    !!form.name.trim() && !!form.type.trim() && !!form.description.trim();
+
+  // ── AI description handler ────────────────────────────────────────────────
+
+  const handleGenerateDescription = async () => {
+    if (!canGenerateDescription) {
+      sileo.error({
+        title: 'Missing fields',
+        description: 'Enter a project name and type before generating.',
+      });
+      return;
+    }
+    setGenerating(true);
+    try {
+      const desc = await apiService.generateProject(
+        form.name.trim(),
+        form.type.trim(),
+      );
+      set('description', desc);
+      sileo.success({
+        title: 'Description generated',
+        description: 'Feel free to edit it before submitting.',
+      });
+    } catch (e) {
+      sileo.error({ title: 'Generation failed', description: String(e) });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // ── AI diagram handler ────────────────────────────────────────────────────
+
+  const handleGenerateDiagram = async () => {
+    if (!canGenerateDiagram) {
+      sileo.error({
+        title: 'Missing fields',
+        description:
+          'Name, type, and description are all required to generate a diagram.',
+      });
+      return;
+    }
+    setGeneratingDiagram(true);
+    try {
+      const blob = await apiService.generateDiagram(
+        form.name.trim(),
+        form.type.trim(),
+        form.description.trim(),
+      );
+      if (diagramPreviewUrl) URL.revokeObjectURL(diagramPreviewUrl);
+      const url = URL.createObjectURL(blob);
+      setDiagramBlob(blob);
+      setDiagramPreviewUrl(url);
+      sileo.success({ title: 'Diagram generated' });
+    } catch (e) {
+      sileo.error({
+        title: 'Failed to generate diagram',
+        description: String(e),
+      });
+    } finally {
+      setGeneratingDiagram(false);
+    }
+  };
+
+  const handleRemoveDiagram = () => {
+    if (diagramPreviewUrl) URL.revokeObjectURL(diagramPreviewUrl);
+    setDiagramBlob(null);
+    setDiagramPreviewUrl(null);
+  };
+
   // ── Validation ────────────────────────────────────────────────────────────
 
   const validate = (): boolean => {
     const e: Partial<FormState & { assignees: string }> = {};
-
     if (!form.name.trim()) e.name = 'Project name is required.';
+    if (!form.type.trim()) e.type = 'Project type is required.';
     if (!form.status) e.status = 'Select a status.';
     if (!form.startDate) e.startDate = 'Start date is required.';
     if (!form.endDate) e.endDate = 'End date is required.';
@@ -234,7 +352,6 @@ export default function CreateProjectModal({
       new Date(form.endDate) < new Date(form.startDate)
     )
       e.endDate = 'End date must be after start date.';
-
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -244,17 +361,28 @@ export default function CreateProjectModal({
   const handleSubmit = async () => {
     if (!validate() || adminId === null) return;
 
-    // Convert date inputs (YYYY-MM-DD) to ISO LocalDateTime strings
     const toISO = (d: string) => `${d}T00:00:00`;
+
+    // Convert blob → base64 to send as JSON field (same as aiGeneratedImage in AddProduct)
+    let diagramBase64: string | null = null;
+    if (diagramBlob) {
+      const buffer = await diagramBlob.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      diagramBase64 = btoa(
+        bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), ''),
+      );
+    }
 
     const payload: ProjectCreate = {
       name: form.name.trim(),
+      type: form.type.trim(),
       description: form.description.trim(),
       status: form.status,
       startDate: toISO(form.startDate),
       endDate: toISO(form.endDate),
       assignedEmployeeIds: selectedIds,
       createdByAdminId: adminId,
+      projectDiagram: diagramBase64,
     };
 
     setSubmitting(true);
@@ -310,6 +438,18 @@ export default function CreateProjectModal({
             />
           </Field>
 
+          <Field label="Project Type:" error={errors.type}>
+            <IconInput
+              icon={Tag}
+              placeholder="e.g. Construction Engineering"
+              value={form.type}
+              onChange={(v) => set('type', v)}
+              disabled={submitting}
+              hasError={!!errors.type}
+            />
+          </Field>
+
+          {/* Description with AI generate button */}
           <Field label="Description:">
             <div className="flex items-start gap-2.5 border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400 transition-colors">
               <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
@@ -317,11 +457,73 @@ export default function CreateProjectModal({
                 placeholder="Brief description (optional)"
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
-                disabled={submitting}
+                disabled={submitting || generating}
                 rows={3}
                 className="flex-1 text-sm bg-transparent outline-none text-slate-800 placeholder:text-slate-400 disabled:opacity-50 resize-none"
               />
             </div>
+            <button
+              onClick={handleGenerateDescription}
+              disabled={submitting || generating || !canGenerateDescription}
+              className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {generating ? <Spinner /> : <Sparkles className="w-3 h-3" />}
+              {generating ? 'Generating…' : 'AI Generate'}
+            </button>
+            {!canGenerateDescription && (
+              <p className="text-xs text-slate-400">
+                Fill in name and type to enable AI description generation.
+              </p>
+            )}
+          </Field>
+
+          {/* Diagram with AI generate button + preview */}
+          <Field label="Diagram:">
+            <button
+              onClick={handleGenerateDiagram}
+              disabled={submitting || generatingDiagram || !canGenerateDiagram}
+              className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {generatingDiagram ? (
+                <Spinner />
+              ) : (
+                <ImageIcon className="w-3 h-3" />
+              )}
+              {generatingDiagram ? 'Generating…' : 'AI Generate Diagram'}
+            </button>
+
+            {!canGenerateDiagram && (
+              <p className="text-xs text-slate-400">
+                Fill in name, type, and description to enable diagram
+                generation.
+              </p>
+            )}
+
+            {/* Preview — mirrors the image preview block in AddProduct */}
+            {diagramPreviewUrl && (
+              <div className="mt-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-slate-500">
+                    AI Generated Diagram Preview:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRemoveDiagram}
+                    disabled={submitting}
+                    className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors disabled:opacity-40"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="border border-slate-200 rounded-lg p-2 bg-slate-50">
+                  <img
+                    src={diagramPreviewUrl}
+                    alt="AI Generated Project Diagram"
+                    className="w-full rounded object-contain max-h-52"
+                  />
+                </div>
+              </div>
+            )}
           </Field>
 
           <Field label="Status:" error={errors.status}>
@@ -366,7 +568,6 @@ export default function CreateProjectModal({
           {/* Employee assignment */}
           <Field label="Assign To:" error={errors.assignees}>
             <div className="border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400">
-              {/* Search bar */}
               <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-200 bg-slate-50">
                 <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <input
@@ -379,7 +580,6 @@ export default function CreateProjectModal({
                 />
               </div>
 
-              {/* Employee list */}
               <div className="max-h-40 overflow-y-auto divide-y divide-slate-100">
                 {filteredEmployees.length === 0 ? (
                   <p className="text-xs text-slate-400 px-3 py-3 text-center">
@@ -417,7 +617,6 @@ export default function CreateProjectModal({
                 )}
               </div>
 
-              {/* Selected count badge */}
               {selectedIds.length > 0 && (
                 <div className="px-3 py-2 bg-blue-50 border-t border-blue-100">
                   <p className="text-xs text-blue-600 font-medium">
@@ -444,27 +643,7 @@ export default function CreateProjectModal({
             disabled={submitting || adminId === null}
             className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold transition-all duration-150 disabled:opacity-60 flex items-center gap-2"
           >
-            {submitting && (
-              <svg
-                className="animate-spin w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8z"
-                />
-              </svg>
-            )}
+            {submitting && <Spinner className="w-4 h-4" />}
             {submitting ? 'Creating…' : 'Create Project'}
           </button>
         </div>
