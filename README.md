@@ -39,35 +39,43 @@ cd Project-Management-System
 ```
 
 **2. Configure the backend**
-```bash
-cd Project-Management/src/main/resources
-cp application.properties.example application.properties
-# Fill in your DB credentials, JWT secret, and OpenAI API key
-```
 
-**3. Configure Docker**
+All configuration lives in environment variables. A single `.env` file is read by both Docker Compose (database) and Spring Boot (app).
 ```bash
 cd Project-Management
 cp .env.example .env
-# Fill in your PostgreSQL credentials (must match application.properties)
+# Fill in POSTGRES_*, JWT_SECRET (openssl rand -base64 32), OPENAI_API_KEY and ADMIN_PASSWORD
 ```
 
-**4. Start the database**
+**3. Start the database**
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-**5. Run the backend**
+**4. Run the backend**
 ```bash
 ./mvnw spring-boot:run
 ```
 
-**6. Run the frontend**
+**5. Configure and run the frontend**
 ```bash
 cd frontend/project-management-system
+cp .env.example .env
 npm install
 npm run dev
 ```
 
 The app will be available at `http://localhost:5173`.
-A default admin account is created automatically on first startup using the credentials set in `application.properties`.
+On first startup, if no admin exists, one is created with the `ADMIN_*` values from `.env`. The app will not start without `ADMIN_PASSWORD`.
+
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | yes | Database credentials |
+| `DB_HOST` / `DB_PORT` | no | Defaults to `localhost:5432` |
+| `JWT_SECRET` | yes | Base64-encoded 256-bit key used to sign tokens |
+| `OPENAI_API_KEY` | yes | OpenAI API key |
+| `ADMIN_PASSWORD` | yes | Password for the bootstrap admin |
+| `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_NAME` | no | Bootstrap admin details |
+| `VITE_API_URL` | no | Frontend: backend base URL (public, bundled into the build) |
