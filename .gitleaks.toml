@@ -1,0 +1,9 @@
+# Default gitleaks rules plus a narrow allowlist for known test fixtures.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake credentials used only by the test suite"
+paths = [
+  '''^backend/src/test/resources/test\.properties$''',
+]

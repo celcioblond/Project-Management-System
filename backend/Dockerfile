@@ -4,10 +4,10 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 
-# Resolve dependencies first so they are cached until pom.xml changes
+# Only what `package` needs is downloaded (dependency:go-offline also pulls every
+# lifecycle plugin, e.g. maven-site-plugin, which made CI builds slow and flaky).
+# The cache mount keeps ~/.m2 between local builds.
 COPY pom.xml .
-RUN --mount=type=cache,target=/root/.m2 mvn -B -q dependency:go-offline
-
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -B -q package -DskipTests \
  && java -Djarmode=tools -jar target/*.jar extract --layers --launcher --destination extracted

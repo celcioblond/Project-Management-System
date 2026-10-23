@@ -1,27 +1,60 @@
 version: 2
+
+# Minor and patch updates are grouped per ecosystem so they arrive as one PR.
+# Major upgrades of the core platform (Spring Boot, React, Java/Node runtimes)
+# change APIs or support policies and are done deliberately, so they are ignored here.
 updates:
   - package-ecosystem: maven
     directory: /backend
     schedule:
       interval: weekly
     groups:
-      spring:
-        patterns: ["org.springframework*"]
+      maven-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "org.springframework.boot:*"
+        update-types: [version-update:semver-major]
+      - dependency-name: "org.springframework.ai:*"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
     groups:
-      dev-dependencies:
-        dependency-type: development
+      npm-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # React 19 is a separate migration: react, react-dom and their types must move together
+      - dependency-name: "react"
+        update-types: [version-update:semver-major]
+      - dependency-name: "react-dom"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/react"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/react-dom"
+        update-types: [version-update:semver-major]
+      # Bundler majors must wait for plugin support (@tailwindcss/vite, @vitejs/plugin-react, vitest)
+      - dependency-name: "vite"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: docker
     directories: [/backend, /frontend]
     schedule:
       interval: weekly
+    ignore:
+      # Runtimes stay on the LTS lines the code targets (Java 21, Node 22)
+      - dependency-name: "eclipse-temurin"
+        update-types: [version-update:semver-major]
+      - dependency-name: "maven"
+        update-types: [version-update:semver-major]
+      - dependency-name: "node"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]

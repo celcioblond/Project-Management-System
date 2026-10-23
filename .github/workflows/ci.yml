@@ -83,6 +83,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # Rules: default gitleaks set + allowlist in .gitleaks.toml. Findings go to the job
+      # summary; PR comments are off so the job keeps read-only permissions.
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
