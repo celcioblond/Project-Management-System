@@ -6,8 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -36,7 +34,7 @@ public class SecurityConfig {
 
     private static final String ADMIN = "ADMIN";
 
-    private final AppUserDetailsService userDetailsService;
+    // Spring Boot wires AppUserDetailsService and the PasswordEncoder below into a DaoAuthenticationProvider
     private final JwtFilter jwtFilter;
 
     @Value("${app.cors.allowed-origins}")
@@ -45,13 +43,6 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
-    }
-
-    @Bean
-    public AuthenticationProvider authProvider(PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return provider;
     }
 
     @Bean
@@ -64,6 +55,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public
                         .requestMatchers("/api/auth/**", "/actuator/health/**").permitAll()
+                        // Error dispatches (e.g. after a 403) must render without re-authenticating
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers(OPTIONS, "/**").permitAll()
 
                         // Admin only: user management, global listings, writes and AI generation

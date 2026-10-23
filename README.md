@@ -17,10 +17,11 @@ A full-stack project management application supporting multi-user collaboration 
 | Layer | Technology |
 |-------|-----------|
 | Backend | Java 21, Spring Boot 3.5, Spring Security, Spring AI 1.0 |
-| Database | PostgreSQL 16 (Docker), pgvector |
+| Database | PostgreSQL 16, pgvector, Flyway migrations |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, DaisyUI |
 | AI | OpenAI GPT-4o, text-embedding-3-small, DALL-E 3 |
-| Auth | JWT (jjwt 0.11.5) |
+| Auth | JWT (jjwt 0.12), BCrypt, role-based access control |
+| Infra | Docker, Docker Compose, nginx |
 
 ## Project Structure
 
@@ -36,7 +37,8 @@ A full-stack project management application supporting multi-user collaboration 
 │   │   ├── repository/          Spring Data repositories
 │   │   ├── security/            JWT filter, token service, Spring Security config
 │   │   └── service/             Business logic, AI and vector store integration
-│   └── src/main/resources/      application.properties, prompts, SQL
+│   ├── src/main/resources/      application.properties, prompts, Flyway migrations
+│   └── Dockerfile               Multi-stage build → non-root JRE image
 ├── frontend/                    React + Vite SPA
 │   ├── src/
 │   │   ├── components/          UI components grouped by feature
@@ -45,8 +47,10 @@ A full-stack project management application supporting multi-user collaboration 
 │   │   ├── pages/               Route-level views
 │   │   ├── services/            Axios client and API calls
 │   │   └── types/               API contracts shared across the app
+│   ├── nginx/                   SPA + /api reverse proxy config and security headers
+│   ├── Dockerfile               Multi-stage build → nginx (unprivileged) image
 │   └── .env.example
-├── docker-compose.yml           PostgreSQL + pgvector (full stack in the Docker step)
+├── docker-compose.yml           Full stack: db + backend + frontend
 └── .env.example                 Backend + Docker configuration
 ```
 
@@ -58,43 +62,40 @@ A full-stack project management application supporting multi-user collaboration 
 - Docker Desktop
 - OpenAI API key
 
-### Setup
+### 1. Clone and configure
 
-**1. Clone the repo**
 ```bash
 git clone https://github.com/celcioblond/Project-Management-System.git
 cd Project-Management-System
-```
-
-**2. Configure the backend**
-
-All configuration lives in environment variables. A single `.env` file at the repository root is read by both Docker Compose (database) and Spring Boot (app).
-```bash
 cp .env.example .env
 # Fill in POSTGRES_*, JWT_SECRET (openssl rand -base64 32), OPENAI_API_KEY and ADMIN_PASSWORD
 ```
 
-**3. Start the database**
+A single `.env` at the repository root is read by Docker Compose and by Spring Boot.
+
+### 2a. Run everything with Docker (recommended)
+
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-**4. Run the backend**
+Open `http://localhost:8081`. nginx serves the SPA and proxies `/api` to the backend, so the
+browser talks to a single origin. Only the frontend port is published; PostgreSQL is bound to
+`127.0.0.1` and the API is reachable only through the proxy.
+
+### 2b. Run for development
+
 ```bash
-cd backend
-./mvnw spring-boot:run
+docker compose up -d db                  # database only
+
+cd backend && ./mvnw spring-boot:run     # API on http://localhost:8080
+
+cd frontend && cp .env.example .env
+npm install && npm run dev               # SPA on http://localhost:5173
 ```
 
-**5. Configure and run the frontend**
-```bash
-cd frontend
-cp .env.example .env
-npm install
-npm run dev
-```
-
-The app will be available at `http://localhost:5173`.
-On first startup, if no admin exists, one is created with the `ADMIN_*` values from `.env`. The app will not start without `ADMIN_PASSWORD`.
+On first startup Flyway creates the schema and, if no admin exists, one is created with the
+`ADMIN_*` values from `.env`. The app refuses to start without `ADMIN_PASSWORD` and `JWT_SECRET`.
 
 ### Environment variables
 
@@ -106,4 +107,8 @@ On first startup, if no admin exists, one is created with the `ADMIN_*` values f
 | `OPENAI_API_KEY` | yes | OpenAI API key |
 | `ADMIN_PASSWORD` | yes | Password for the bootstrap admin |
 | `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_NAME` | no | Bootstrap admin details |
+| `JWT_EXPIRATION` | no | Token lifetime as ISO-8601 duration (default `PT8H`) |
+| `CORS_ALLOWED_ORIGINS` | no | Browser origins allowed to call the API (default `http://localhost:5173`) |
+| `AI_RATE_LIMIT_PER_MINUTE` | no | Per-user limit on OpenAI-backed endpoints (default `10`) |
+| `APP_PORT` | no | Host port for the Docker frontend (default `8081`) |
 | `VITE_API_URL` | no | Frontend: backend base URL (public, bundled into the build) |

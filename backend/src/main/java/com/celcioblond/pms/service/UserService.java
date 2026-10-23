@@ -83,7 +83,7 @@ public class UserService {
         user.setUsername(register.username());
         user.setEmail(register.email());
         user.setPassword(passwordEncoder.encode(register.password()));
-        user.setName("");
+        user.setName(register.username()); // shown as author until the profile is filled in
         user.setRole(Role.EMPLOYEE);
 
         return saveAndIndex(user);

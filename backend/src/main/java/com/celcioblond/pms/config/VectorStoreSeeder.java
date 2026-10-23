@@ -74,9 +74,14 @@ public class VectorStoreSeeder implements ApplicationRunner {
 
         if (toAdd.isEmpty()) {
             log.info("All {} already indexed.", label);
-        } else {
+            return;
+        }
+        try {
             vectorStore.add(toAdd);
             log.info("Seeded {} {}.", toAdd.size(), label);
+        } catch (Exception e) {
+            // Usually an OpenAI outage or invalid key; the app must still start
+            log.warn("Could not seed {} into the vector store: {}", label, e.getMessage());
         }
     }
 

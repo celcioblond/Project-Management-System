@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -41,28 +42,23 @@ public class VectorStoreService {
     // ─── Public upsert methods (called by other services) ────────────────────
 
     public void upsertProject(Project project) {
-        deleteByMeta("projectId", String.valueOf(project.getId()));
-        vectorStore.add(List.of(buildProjectDocument(project)));
+        upsert("projectId", project.getId(), () -> buildProjectDocument(project));
     }
 
     public void upsertTask(Task task) {
-        deleteByMeta("taskId", String.valueOf(task.getId()));
-        vectorStore.add(List.of(buildTaskDocument(task)));
+        upsert("taskId", task.getId(), () -> buildTaskDocument(task));
     }
 
     public void upsertUser(User user) {
-        deleteByMeta("userId", String.valueOf(user.getId()));
-        vectorStore.add(List.of(buildUserDocument(user)));
+        upsert("userId", user.getId(), () -> buildUserDocument(user));
     }
 
     public void upsertProjectComment(ProjectComment comment) {
-        deleteByMeta("projectCommentId", String.valueOf(comment.getId()));
-        vectorStore.add(List.of(buildProjectCommentDocument(comment)));
+        upsert("projectCommentId", comment.getId(), () -> buildProjectCommentDocument(comment));
     }
 
     public void upsertTaskComment(TaskComment comment) {
-        deleteByMeta("taskCommentId", String.valueOf(comment.getId()));
-        vectorStore.add(List.of(buildTaskCommentDocument(comment)));
+        upsert("taskCommentId", comment.getId(), () -> buildTaskCommentDocument(comment));
     }
 
     // ─── Public delete methods ────────────────────────────────────────────────
@@ -254,6 +250,20 @@ public class VectorStoreService {
 
     private static String joinNames(List<User> users, String fallback) {
         return users.isEmpty() ? fallback : users.stream().map(User::getName).collect(Collectors.joining(", "));
+    }
+
+    /**
+     * Replaces the document for one entity. Embedding calls go to OpenAI, so a failure
+     * here is logged instead of propagated: the chatbot context may lag behind, but
+     * regular CRUD keeps working when the AI provider is unavailable.
+     */
+    private void upsert(String key, Long id, Supplier<Document> document) {
+        try {
+            deleteByMeta(key, String.valueOf(id));
+            vectorStore.add(List.of(document.get()));
+        } catch (Exception e) {
+            log.warn("Could not index {}={} in the vector store: {}", key, id, e.getMessage());
+        }
     }
 
     private void deleteByMeta(String key, String value) {
