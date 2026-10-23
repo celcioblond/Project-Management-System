@@ -3,6 +3,7 @@ package com.celcioblond.pms.service;
 import com.celcioblond.pms.dto.ProjectCommentCreate;
 import com.celcioblond.pms.dto.ProjectCommentResponse;
 import com.celcioblond.pms.dto.ProjectCommentUpdate;
+import com.celcioblond.pms.exception.ResourceNotFoundException;
 import com.celcioblond.pms.mapper.ResponseMapper;
 import com.celcioblond.pms.model.Project;
 import com.celcioblond.pms.model.ProjectComment;
@@ -10,6 +11,8 @@ import com.celcioblond.pms.model.User;
 import com.celcioblond.pms.repository.ProjectCommentRepository;
 import com.celcioblond.pms.repository.ProjectRepository;
 import com.celcioblond.pms.repository.UserRepository;
+import com.celcioblond.pms.security.AccessPolicy;
+import com.celcioblond.pms.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,26 +28,28 @@ public class ProjectCommentService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final VectorStoreService vectorStoreService;
+    private final AccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
-    public List<ProjectCommentResponse> getAllProjectComments(Long projectId) {
+    public List<ProjectCommentResponse> getAllProjectComments(Long projectId, UserPrincipal currentUser) {
+        accessPolicy.requireProjectAccess(projectId, currentUser);
         return toResponses(projectCommentRepository.findByProjectId(projectId));
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectCommentResponse> getCommentsByUsername(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
-        return toResponses(projectCommentRepository.findByAuthorId(user.getId()));
+    public List<ProjectCommentResponse> getCommentsForUser(UserPrincipal currentUser) {
+        return toResponses(projectCommentRepository.findByAuthorId(currentUser.getId()));
     }
 
     @Transactional
-    public ProjectCommentResponse createComment(ProjectCommentCreate projectCommentCreate) {
-        Project project = projectRepository.findById(projectCommentCreate.projectId())
-                .orElseThrow(() -> new RuntimeException("Project not found by id: " + projectCommentCreate.projectId()));
+    public ProjectCommentResponse createComment(ProjectCommentCreate projectCommentCreate, UserPrincipal currentUser) {
+        Long projectId = projectCommentCreate.projectId();
+        accessPolicy.requireProjectAccess(projectId, currentUser);
 
-        User author = userRepository.findById(projectCommentCreate.authorId())
-                .orElseThrow(() -> new RuntimeException("Author not found by id: " + projectCommentCreate.authorId()));
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project", projectId));
+        User author = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", currentUser.getId()));
 
         ProjectComment comment = new ProjectComment();
         comment.setContent(projectCommentCreate.content());
@@ -53,17 +58,21 @@ public class ProjectCommentService {
         comment.setCreatedAt(LocalDateTime.now());
 
         ProjectComment savedComment = projectCommentRepository.save(comment);
+        project.getComments().add(savedComment);
 
         vectorStoreService.upsertProjectComment(savedComment);
         // Re-index the parent project so its comment context is fresh
-        vectorStoreService.upsertProject(projectRepository.findById(project.getId()).orElse(project));
+        vectorStoreService.upsertProject(project);
 
         return ResponseMapper.toProjectCommentResponse(savedComment);
     }
 
     @Transactional
-    public ProjectCommentResponse updateComment(Long id, ProjectCommentUpdate projectCommentUpdate) {
+    public ProjectCommentResponse updateComment(Long id, ProjectCommentUpdate projectCommentUpdate,
+                                                UserPrincipal currentUser) {
         ProjectComment comment = findComment(id);
+        accessPolicy.requireAuthorOrAdmin(comment.getAuthor(), currentUser);
+
         comment.setContent(projectCommentUpdate.content());
         comment.setUpdatedAt(LocalDateTime.now());
 
@@ -74,15 +83,17 @@ public class ProjectCommentService {
     }
 
     @Transactional
-    public void deleteComment(Long id) {
+    public void deleteComment(Long id, UserPrincipal currentUser) {
         ProjectComment comment = findComment(id);
+        accessPolicy.requireAuthorOrAdmin(comment.getAuthor(), currentUser);
+
         vectorStoreService.deleteProjectComment(id);
+        comment.getProject().getComments().remove(comment);
         projectCommentRepository.delete(comment);
     }
 
     private ProjectComment findComment(Long id) {
-        return projectCommentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Comment not found with id: " + id));
+        return projectCommentRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Comment", id));
     }
 
     private static List<ProjectCommentResponse> toResponses(List<ProjectComment> comments) {

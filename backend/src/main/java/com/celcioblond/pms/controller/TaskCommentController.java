@@ -3,11 +3,13 @@ package com.celcioblond.pms.controller;
 import com.celcioblond.pms.dto.TaskCommentCreate;
 import com.celcioblond.pms.dto.TaskCommentResponse;
 import com.celcioblond.pms.dto.TaskCommentUpdate;
-import com.celcioblond.pms.security.JwtService;
+import com.celcioblond.pms.security.UserPrincipal;
 import com.celcioblond.pms.service.TaskCommentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,33 +20,38 @@ import java.util.List;
 public class TaskCommentController {
 
     private final TaskCommentService taskCommentService;
-    private final JwtService jwtService;
 
     @GetMapping("/tasks/{taskId}/comments")
-    public ResponseEntity<List<TaskCommentResponse>> getAllTaskComments(@PathVariable Long taskId) {
-        return ResponseEntity.ok(taskCommentService.getCommentsByTaskId(taskId));
+    public ResponseEntity<List<TaskCommentResponse>> getAllTaskComments(
+            @PathVariable Long taskId, @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(taskCommentService.getCommentsByTaskId(taskId, currentUser));
     }
 
     @GetMapping("/tasks-comments/my-comments")
-    public ResponseEntity<List<TaskCommentResponse>> getMyTaskComments(@RequestHeader("Authorization") String token) {
-        String username = jwtService.extractUsername(token.substring(7));
-        return ResponseEntity.ok(taskCommentService.getCommentsByUsername(username));
+    public ResponseEntity<List<TaskCommentResponse>> getMyTaskComments(
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(taskCommentService.getCommentsForUser(currentUser));
     }
 
     @PostMapping("/task-comments")
-    public ResponseEntity<TaskCommentResponse> createComment(@RequestBody TaskCommentCreate commentCreate) {
-        return new ResponseEntity<>(taskCommentService.createComment(commentCreate), HttpStatus.CREATED);
+    public ResponseEntity<TaskCommentResponse> createComment(
+            @Valid @RequestBody TaskCommentCreate commentCreate,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return new ResponseEntity<>(taskCommentService.createComment(commentCreate, currentUser), HttpStatus.CREATED);
     }
 
     @PutMapping("/task-comments/{id}")
-    public ResponseEntity<TaskCommentResponse> updateComment(@PathVariable Long id,
-                                                             @RequestBody TaskCommentUpdate commentUpdate) {
-        return ResponseEntity.ok(taskCommentService.updateComment(id, commentUpdate));
+    public ResponseEntity<TaskCommentResponse> updateComment(
+            @PathVariable Long id,
+            @Valid @RequestBody TaskCommentUpdate commentUpdate,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(taskCommentService.updateComment(id, commentUpdate, currentUser));
     }
 
     @DeleteMapping("/task-comments/{id}")
-    public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
-        taskCommentService.deleteComment(id);
+    public ResponseEntity<Void> deleteComment(@PathVariable Long id,
+                                              @AuthenticationPrincipal UserPrincipal currentUser) {
+        taskCommentService.deleteComment(id, currentUser);
         return ResponseEntity.noContent().build();
     }
 }

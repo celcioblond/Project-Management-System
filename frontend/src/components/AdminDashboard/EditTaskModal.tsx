@@ -41,7 +41,6 @@ const PRIORITY_LABELS: Record<string, string> = {
 interface EditTaskModalProps {
   open: boolean;
   task: TaskResponse | null;
-  adminId: number | null;
   employees: UserResponse[];
   onClose: () => void;
   onUpdated: () => void;
@@ -175,7 +174,6 @@ function toDateInput(iso: string): string {
 export default function EditTaskModal({
   open,
   task,
-  adminId,
   employees,
   onClose,
   onUpdated,
@@ -269,7 +267,7 @@ export default function EditTaskModal({
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
-    if (!task || !validate() || adminId === null) return;
+    if (!task || !validate()) return;
 
     const payload: TaskUpdate = {
       title: form.title.trim(),
@@ -277,7 +275,6 @@ export default function EditTaskModal({
       status: form.status,
       priority: form.priority,
       dueDate: `${form.dueDate}T00:00:00`,
-      updatedByAdminId: adminId,
       assignedEmployeeIds: selectedIds,
     };
 
@@ -484,7 +481,7 @@ export default function EditTaskModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting || adminId === null}
+            disabled={submitting}
             className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold transition-all duration-150 disabled:opacity-60 flex items-center gap-2"
           >
             {submitting && (

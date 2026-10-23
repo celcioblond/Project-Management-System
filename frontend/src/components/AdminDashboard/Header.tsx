@@ -25,7 +25,6 @@ import {
   type TaskResponse,
   type CommentResponse,
 } from '../../services/api';
-import { useAuth } from '../../hooks/useAuth';
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
@@ -123,7 +122,6 @@ const NAV_ITEMS = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const Header = () => {
-  const { user } = useAuth();
 
   // ── Modal state ───────────────────────────────────────────────────────────
   const [createUserOpen, setCreateUserOpen] = useState(false);
@@ -158,9 +156,6 @@ const Header = () => {
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [loadingComments, setLoadingComments] = useState(true);
 
-  // ── Current admin id (needed for create/update calls) ─────────────────────
-  const [adminId, setAdminId] = useState<number | null>(null);
-
   // ── Scroll-to-section refs ────────────────────────────────────────────────
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollTo = (id: string) =>
@@ -176,16 +171,12 @@ const Header = () => {
     try {
       const data = await apiService.getAllUsers();
       setUsers(data);
-      if (user?.username) {
-        const me = data.find((u) => u.username === user.username);
-        if (me) setAdminId(me.id);
-      }
     } catch (e) {
       sileo.error({ title: 'Failed to load users', description: String(e) });
     } finally {
       setLoadingUsers(false);
     }
-  }, [user]);
+  }, []);
 
   const loadProjects = useCallback(async () => {
     setLoadingProjects(true);
@@ -421,7 +412,6 @@ const Header = () => {
       />
       <CreateProjectModal
         open={createProjectOpen}
-        adminId={adminId}
         employees={users}
         onClose={() => setCreateProjectOpen(false)}
         onCreated={loadProjects}
@@ -429,7 +419,6 @@ const Header = () => {
       <EditProjectModal
         open={editProjectTarget !== null}
         project={editProjectTarget}
-        adminId={adminId}
         employees={users}
         onClose={() => setEditProjectTarget(null)}
         onUpdated={loadProjects}
@@ -442,7 +431,6 @@ const Header = () => {
       />
       <CreateTaskModal
         open={createTaskOpen}
-        adminId={adminId}
         projects={projects}
         employees={users}
         onClose={() => setCreateTaskOpen(false)}
@@ -451,7 +439,6 @@ const Header = () => {
       <EditTaskModal
         open={editTaskTarget !== null}
         task={editTaskTarget}
-        adminId={adminId}
         employees={users}
         onClose={() => setEditTaskTarget(null)}
         onUpdated={loadTasks}

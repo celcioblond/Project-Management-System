@@ -33,7 +33,6 @@ const STATUS_LABELS: Record<string, string> = {
 
 interface CreateProjectModalProps {
   open: boolean;
-  adminId: number | null;
   employees: UserResponse[];
   onClose: () => void;
   onCreated: () => void;
@@ -195,7 +194,6 @@ function Spinner({ className = 'w-3 h-3' }: { className?: string }) {
 
 export default function CreateProjectModal({
   open,
-  adminId,
   employees,
   onClose,
   onCreated,
@@ -359,7 +357,7 @@ export default function CreateProjectModal({
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
-    if (!validate() || adminId === null) return;
+    if (!validate()) return;
 
     const toISO = (d: string) => `${d}T00:00:00`;
 
@@ -381,7 +379,6 @@ export default function CreateProjectModal({
       startDate: toISO(form.startDate),
       endDate: toISO(form.endDate),
       assignedEmployeeIds: selectedIds,
-      createdByAdminId: adminId,
       projectDiagram: diagramBase64,
     };
 
@@ -640,7 +637,7 @@ export default function CreateProjectModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting || adminId === null}
+            disabled={submitting}
             className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold transition-all duration-150 disabled:opacity-60 flex items-center gap-2"
           >
             {submitting && <Spinner className="w-4 h-4" />}

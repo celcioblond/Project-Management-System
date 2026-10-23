@@ -110,24 +110,11 @@ export default function ProjectCommentSection({
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [authorId, setAuthorId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CommentResponse | null>(
     null,
   );
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // ── Resolve current user's ID ──────────────────────────────────────────────
-  useEffect(() => {
-    if (!user?.username) return;
-    apiService
-      .getAllUsers()
-      .then((users) => {
-        const me = users.find((u) => u.username === user.username);
-        if (me) setAuthorId(me.id);
-      })
-      .catch(() => {});
-  }, [user]);
 
   // ── Load & normalise comments ──────────────────────────────────────────────
   const loadComments = useCallback(async () => {
@@ -165,23 +152,6 @@ export default function ProjectCommentSection({
   const handleSubmit = async () => {
     if (!text.trim()) return;
 
-    // Resolve authorId if still null
-    let aid = authorId;
-    if (!aid) {
-      try {
-        const users = await apiService.getAllUsers();
-        const me = users.find((u) => u.username === user?.username);
-        aid = me?.id ?? null;
-        if (aid) setAuthorId(aid);
-      } catch {
-        /* ignore */
-      }
-    }
-    if (!aid) {
-      setError('Could not identify your account.');
-      return;
-    }
-
     // Optimistic entry — shown immediately
     const optimistic: CommentResponse = {
       id: Date.now(),
@@ -201,7 +171,6 @@ export default function ProjectCommentSection({
       await apiService.createProjectComment({
         content: optimistic.content,
         projectId,
-        authorId: aid,
       });
       // Replace optimistic entry with real server data
       await loadComments();

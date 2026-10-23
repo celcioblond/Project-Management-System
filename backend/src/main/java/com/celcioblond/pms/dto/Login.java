@@ -1,7 +1,9 @@
 package com.celcioblond.pms.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record Login(
-        String username,
-        String password
+        @NotBlank String username,
+        @NotBlank String password
 ) {
 }

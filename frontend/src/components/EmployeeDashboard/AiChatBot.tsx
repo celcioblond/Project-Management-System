@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { apiService } from '../../services/api';
-import { useAuth } from '../../hooks/useAuth';
 
 interface ChatMessage {
   id: number;
@@ -33,7 +32,6 @@ export default function AiChatBot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const idCounter = useRef(1);
-  const { user } = useAuth();
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -65,10 +63,7 @@ export default function AiChatBot() {
       setError(null);
 
       try {
-        const botText = await apiService.askBot(
-          text.trim(),
-          user?.username ?? '',
-        );
+        const botText = await apiService.askBot(text.trim());
 
         const botMsg: ChatMessage = {
           id: idCounter.current++,
@@ -85,7 +80,7 @@ export default function AiChatBot() {
         setIsTyping(false);
       }
     },
-    [isTyping, isOpen, user?.username],
+    [isTyping, isOpen],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

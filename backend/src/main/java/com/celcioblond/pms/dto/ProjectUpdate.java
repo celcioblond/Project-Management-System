@@ -1,18 +1,20 @@
 package com.celcioblond.pms.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record ProjectUpdate(
-        String name,
-        String description,
-        String type,
-        String status,
+        @Size(max = 255) String name,
+        @Size(max = 255) String description,
+        @Size(max = 100) String type,
+        @Size(max = 50) String status,
         LocalDateTime startDate,
         LocalDateTime endDate,
         List<Long> assignedEmployeeIds,
-        Long updatedByAdminId,
-        List<TaskCreate> newTasks,
+        List<@Valid TaskCreate> newTasks,
         byte[] projectDiagram
 ) {
 }

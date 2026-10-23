@@ -22,6 +22,8 @@ import java.util.function.Function;
  * it creates and adds a document so the RAG chatbot has full context.
  *
  * Safe to re-run — it checks existence first and skips already-indexed items.
+ * Documents written with an older {@link VectorStoreService#SCHEMA_VERSION} are
+ * dropped first so they get rebuilt with the current metadata.
  */
 @Slf4j
 @Component
@@ -41,6 +43,13 @@ public class VectorStoreSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         log.info("Starting vector store seeding...");
+
+        int stale = jdbcTemplate.update(
+                "DELETE FROM vector_store WHERE metadata->>? IS DISTINCT FROM ?",
+                VectorStoreService.SCHEMA_VERSION_KEY, VectorStoreService.SCHEMA_VERSION);
+        if (stale > 0) {
+            log.info("Removed {} documents from an older index format; they will be re-indexed.", stale);
+        }
 
         seed("projects", "projectId", projectRepository.findAll(),
                 Project::getId, vectorStoreService::buildProjectDocument);
@@ -65,9 +74,14 @@ public class VectorStoreSeeder implements ApplicationRunner {
 
         if (toAdd.isEmpty()) {
             log.info("All {} already indexed.", label);
-        } else {
+            return;
+        }
+        try {
             vectorStore.add(toAdd);
             log.info("Seeded {} {}.", toAdd.size(), label);
+        } catch (Exception e) {
+            // Usually an OpenAI outage or invalid key; the app must still start
+            log.warn("Could not seed {} into the vector store: {}", label, e.getMessage());
         }
     }
 

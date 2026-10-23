@@ -1,16 +1,21 @@
 package com.celcioblond.pms.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * @param projectId required for POST /tasks; ignored when tasks are created as part of a project
+ */
 public record TaskCreate(
-        String title,
-        String description,
-        String status,
-        String priority,
+        @NotBlank @Size(max = 255) String title,
+        @Size(max = 255) String description,
+        @Size(max = 50) String status,
+        @Size(max = 50) String priority,
         LocalDateTime dueDate,
         Long projectId,
-        List<Long> assignedEmployeeIds,
-        Long assignedByAdminId
+        List<Long> assignedEmployeeIds
 ) {
 }

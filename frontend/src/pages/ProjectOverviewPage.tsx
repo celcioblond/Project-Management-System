@@ -191,7 +191,6 @@ function TaskModal({
   onSave,
   employees,
   projectId,
-  adminId,
 }: {
   modal: TaskFormModal;
   onClose: () => void;
@@ -200,7 +199,6 @@ function TaskModal({
   ) => Promise<void>;
   employees: UserResponse[];
   projectId: number;
-  adminId: number | null;
 }) {
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
@@ -220,7 +218,6 @@ function TaskModal({
         priority: t.priority,
         dueDate: t.dueDate?.slice(0, 16) ?? '',
         assignedEmployeeIds: empIds,
-        updatedByAdminId: adminId,
       });
     } else {
       setForm({
@@ -228,11 +225,10 @@ function TaskModal({
         priority: 'MEDIUM',
         projectId,
         assignedEmployeeIds: [],
-        assignedByAdminId: adminId,
       });
     }
     setError('');
-  }, [modal.open, modal.mode, modal.task, adminId, projectId, employees]);
+  }, [modal.open, modal.mode, modal.task, projectId, employees]);
 
   const set = (k: string, v: unknown) => setForm((p) => ({ ...p, [k]: v }));
   const toggleEmp = (id: number) => {
@@ -426,7 +422,6 @@ export default function ProjectOverviewPage() {
 
   const [project, setProject] = useState<ProjectResponse | null>(null);
   const [allUsers, setAllUsers] = useState<UserResponse[]>([]);
-  const [adminId, setAdminId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -464,20 +459,15 @@ export default function ProjectOverviewPage() {
     if (isAdmin) {
       apiService
         .getAllUsers()
-        .then((users) => {
-          setAllUsers(users);
-          const me = users.find((u) => u.username === user?.username);
-          if (me) setAdminId(me.id);
-        })
+        .then(setAllUsers)
         .catch(() => {});
     }
-  }, [loadProject, isAdmin, user]);
+  }, [loadProject, isAdmin]);
 
   const handleStatusChange = async (taskId: number, newStatus: string) => {
     try {
       await apiService.updateTask(taskId, {
         status: newStatus,
-        updatedByAdminId: adminId ?? undefined,
       });
       setInlineStatusEdit(null);
       await loadProject();
@@ -491,7 +481,7 @@ export default function ProjectOverviewPage() {
     data: Partial<TaskCreate & TaskUpdate>,
   ) => {
     if (taskModal.mode === 'create')
-      await apiService.createTask(data as TaskCreate, adminId!);
+      await apiService.createTask(data as TaskCreate);
     else if (taskModal.task)
       await apiService.updateTask(taskModal.task.id, data as TaskUpdate);
     await loadProject();
@@ -1010,7 +1000,6 @@ export default function ProjectOverviewPage() {
           onSave={handleTaskSave}
           employees={employees}
           projectId={project.id}
-          adminId={adminId}
         />
       )}
 
