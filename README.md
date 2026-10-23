@@ -36,18 +36,18 @@ A full-stack project management application supporting multi-user collaboration 
 │   │   ├── repository/          Spring Data repositories
 │   │   ├── security/            JWT filter, token service, Spring Security config
 │   │   └── service/             Business logic, AI and vector store integration
-│   ├── src/main/resources/      application.properties, prompts, SQL
-│   ├── docker-compose.yml       PostgreSQL + pgvector for local development
+│   └── src/main/resources/      application.properties, prompts, SQL
+├── frontend/                    React + Vite SPA
+│   ├── src/
+│   │   ├── components/          UI components grouped by feature
+│   │   ├── context/             Auth context and provider
+│   │   ├── hooks/               Custom hooks (useAuth)
+│   │   ├── pages/               Route-level views
+│   │   ├── services/            Axios client and API calls
+│   │   └── types/               API contracts shared across the app
 │   └── .env.example
-└── frontend/                    React + Vite SPA
-    ├── src/
-    │   ├── components/          UI components grouped by feature
-    │   ├── context/             Auth context and provider
-    │   ├── hooks/               Custom hooks (useAuth)
-    │   ├── pages/               Route-level views
-    │   ├── services/            Axios client and API calls
-    │   └── types/               API contracts shared across the app
-    └── .env.example
+├── docker-compose.yml           PostgreSQL + pgvector (full stack in the Docker step)
+└── .env.example                 Backend + Docker configuration
 ```
 
 ## Getting Started
@@ -68,9 +68,8 @@ cd Project-Management-System
 
 **2. Configure the backend**
 
-All configuration lives in environment variables. A single `.env` file is read by both Docker Compose (database) and Spring Boot (app).
+All configuration lives in environment variables. A single `.env` file at the repository root is read by both Docker Compose (database) and Spring Boot (app).
 ```bash
-cd backend
 cp .env.example .env
 # Fill in POSTGRES_*, JWT_SECRET (openssl rand -base64 32), OPENAI_API_KEY and ADMIN_PASSWORD
 ```
@@ -82,6 +81,7 @@ docker compose up -d
 
 **4. Run the backend**
 ```bash
+cd backend
 ./mvnw spring-boot:run
 ```
 
