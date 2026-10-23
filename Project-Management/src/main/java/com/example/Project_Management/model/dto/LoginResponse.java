@@ -1,8 +1,0 @@
-package com.example.Project_Management.model.dto;
-
-public record LoginResponse(
-        String token,
-        String username,
-        String role
-) {
-}
