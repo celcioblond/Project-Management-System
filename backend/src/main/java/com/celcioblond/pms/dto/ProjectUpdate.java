@@ -1,0 +1,18 @@
+package com.celcioblond.pms.dto;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public record ProjectUpdate(
+        String name,
+        String description,
+        String type,
+        String status,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
+        List<Long> assignedEmployeeIds,
+        Long updatedByAdminId,
+        List<TaskCreate> newTasks,
+        byte[] projectDiagram
+) {
+}
