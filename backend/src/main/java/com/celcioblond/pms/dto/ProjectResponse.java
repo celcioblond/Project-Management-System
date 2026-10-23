@@ -1,0 +1,21 @@
+package com.celcioblond.pms.dto;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public record ProjectResponse(
+        Long id,
+        String title,
+        String description,
+        String type,
+        String status,
+        LocalDateTime startDate,
+        LocalDateTime endDate,
+        List<String> assignedEmployeeNames,
+        String createdByAdminName,
+        List<TaskResponse> tasks,
+        List<ProjectCommentResponse> comments,
+        LocalDateTime createdAt,
+        byte[] projectDiagram
+) {
+}
