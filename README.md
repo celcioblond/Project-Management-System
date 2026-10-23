@@ -18,14 +18,42 @@ A full-stack project management application supporting multi-user collaboration 
 |-------|-----------|
 | Backend | Java 21, Spring Boot 3.5, Spring Security, Spring AI 1.0 |
 | Database | PostgreSQL 16 (Docker), pgvector |
-| Frontend | React 18, TypeScript, Tailwind CSS, DaisyUI |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, DaisyUI |
 | AI | OpenAI GPT-4o, text-embedding-3-small, DALL-E 3 |
 | Auth | JWT (jjwt 0.11.5) |
+
+## Project Structure
+
+```
+.
+├── backend/                     Spring Boot REST API
+│   ├── src/main/java/com/celcioblond/pms/
+│   │   ├── config/              App bootstrapping (admin seed, vector store seed, AI client)
+│   │   ├── controller/          REST endpoints
+│   │   ├── dto/                 Request / response records
+│   │   ├── mapper/              Entity → DTO conversion
+│   │   ├── model/               JPA entities
+│   │   ├── repository/          Spring Data repositories
+│   │   ├── security/            JWT filter, token service, Spring Security config
+│   │   └── service/             Business logic, AI and vector store integration
+│   ├── src/main/resources/      application.properties, prompts, SQL
+│   ├── docker-compose.yml       PostgreSQL + pgvector for local development
+│   └── .env.example
+└── frontend/                    React + Vite SPA
+    ├── src/
+    │   ├── components/          UI components grouped by feature
+    │   ├── context/             Auth context and provider
+    │   ├── hooks/               Custom hooks (useAuth)
+    │   ├── pages/               Route-level views
+    │   ├── services/            Axios client and API calls
+    │   └── types/               API contracts shared across the app
+    └── .env.example
+```
 
 ## Getting Started
 
 ### Prerequisites
-- Java 21+
+- Java 21 (the Lombok version bundled with Spring Boot 3.5 does not compile on newer JDKs)
 - Node.js 18+
 - Docker Desktop
 - OpenAI API key
@@ -42,7 +70,7 @@ cd Project-Management-System
 
 All configuration lives in environment variables. A single `.env` file is read by both Docker Compose (database) and Spring Boot (app).
 ```bash
-cd Project-Management
+cd backend
 cp .env.example .env
 # Fill in POSTGRES_*, JWT_SECRET (openssl rand -base64 32), OPENAI_API_KEY and ADMIN_PASSWORD
 ```
@@ -59,7 +87,7 @@ docker compose up -d
 
 **5. Configure and run the frontend**
 ```bash
-cd frontend/project-management-system
+cd frontend
 cp .env.example .env
 npm install
 npm run dev
