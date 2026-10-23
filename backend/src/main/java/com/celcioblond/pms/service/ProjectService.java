@@ -4,6 +4,7 @@ import com.celcioblond.pms.dto.ProjectCreate;
 import com.celcioblond.pms.dto.ProjectResponse;
 import com.celcioblond.pms.dto.ProjectUpdate;
 import com.celcioblond.pms.dto.TaskCreate;
+import com.celcioblond.pms.exception.ResourceNotFoundException;
 import com.celcioblond.pms.mapper.ResponseMapper;
 import com.celcioblond.pms.model.Project;
 import com.celcioblond.pms.model.ProjectComment;
@@ -12,6 +13,8 @@ import com.celcioblond.pms.model.User;
 import com.celcioblond.pms.repository.ProjectRepository;
 import com.celcioblond.pms.repository.TaskRepository;
 import com.celcioblond.pms.repository.UserRepository;
+import com.celcioblond.pms.security.AccessPolicy;
+import com.celcioblond.pms.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,7 @@ public class ProjectService {
     private final ChatClient chatClient;
     private final AiImageGeneratorService aiImageGeneratorService;
     private final VectorStoreService vectorStoreService;
+    private final AccessPolicy accessPolicy;
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
@@ -39,19 +43,21 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public ProjectResponse getProjectById(Long id) {
+    public ProjectResponse getProjectById(Long id, UserPrincipal currentUser) {
+        accessPolicy.requireProjectAccess(id, currentUser);
         return ResponseMapper.toProjectResponse(findProject(id));
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectResponse> getProjectsByUsername(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public List<ProjectResponse> getProjectsForUser(UserPrincipal currentUser) {
+        User user = findUser(currentUser.getId());
         return toResponses(projectRepository.findByAssignedEmployee(user));
     }
 
     @Transactional
-    public ProjectResponse addProject(ProjectCreate projectCreate) {
+    public ProjectResponse addProject(ProjectCreate projectCreate, UserPrincipal currentUser) {
+        User admin = findUser(currentUser.getId());
+
         Project project = new Project();
         project.setName(projectCreate.name());
         project.setType(projectCreate.type());
@@ -61,20 +67,17 @@ public class ProjectService {
         project.setEndDate(projectCreate.endDate());
         project.setCreatedAt(LocalDateTime.now());
         project.setProjectDiagram(projectCreate.projectDiagram());
+        project.setCreatedByAdmin(admin);
 
         if (projectCreate.assignedEmployeeIds() != null && !projectCreate.assignedEmployeeIds().isEmpty()) {
             project.setAssignedEmployees(userRepository.findAllById(projectCreate.assignedEmployeeIds()));
         }
 
-        User createdByAdmin = userRepository.findById(projectCreate.createdByAdminId())
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
-        project.setCreatedByAdmin(createdByAdmin);
-
         Project savedProject = projectRepository.save(project);
 
         if (projectCreate.tasks() != null) {
             for (TaskCreate taskCreate : projectCreate.tasks()) {
-                createTaskForProject(savedProject, taskCreate, createdByAdmin);
+                createTaskForProject(savedProject, taskCreate, admin);
             }
         }
 
@@ -83,7 +86,7 @@ public class ProjectService {
                 ProjectComment comment = new ProjectComment();
                 comment.setContent(commentContent);
                 comment.setProject(savedProject);
-                comment.setAuthor(createdByAdmin);
+                comment.setAuthor(admin);
                 comment.setCreatedAt(LocalDateTime.now());
                 savedProject.getComments().add(comment);
             }
@@ -97,7 +100,7 @@ public class ProjectService {
     }
 
     @Transactional
-    public ProjectResponse updateProject(Long id, ProjectUpdate projectUpdate) {
+    public ProjectResponse updateProject(Long id, ProjectUpdate projectUpdate, UserPrincipal currentUser) {
         Project project = findProject(id);
 
         if (projectUpdate.name() != null) project.setName(projectUpdate.name());
@@ -111,15 +114,10 @@ public class ProjectService {
             project.setAssignedEmployees(userRepository.findAllById(projectUpdate.assignedEmployeeIds()));
         }
 
-        User updatedByAdmin = null;
-        if (projectUpdate.updatedByAdminId() != null) {
-            updatedByAdmin = userRepository.findById(projectUpdate.updatedByAdminId())
-                    .orElseThrow(() -> new RuntimeException("Admin not found"));
-        }
-
-        if (projectUpdate.newTasks() != null) {
+        if (projectUpdate.newTasks() != null && !projectUpdate.newTasks().isEmpty()) {
+            User admin = findUser(currentUser.getId());
             for (TaskCreate taskCreate : projectUpdate.newTasks()) {
-                createTaskForProject(project, taskCreate, updatedByAdmin);
+                createTaskForProject(project, taskCreate, admin);
             }
         }
 
@@ -143,8 +141,11 @@ public class ProjectService {
     // ─── Private helpers ─────────────────────────────────────────────────────
 
     private Project findProject(Long id) {
-        return projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found with id: " + id));
+        return projectRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Project", id));
+    }
+
+    private User findUser(Long id) {
+        return userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User", id));
     }
 
     private void createTaskForProject(Project project, TaskCreate taskCreate, User assignedByAdmin) {
@@ -156,12 +157,11 @@ public class ProjectService {
         task.setDueDate(taskCreate.dueDate());
         task.setProject(project);
         task.setCreatedAt(LocalDateTime.now());
+        task.setAssignedByAdmin(assignedByAdmin);
 
         if (taskCreate.assignedEmployeeIds() != null && !taskCreate.assignedEmployeeIds().isEmpty()) {
             task.setAssignedEmployees(userRepository.findAllById(taskCreate.assignedEmployeeIds()));
         }
-
-        if (assignedByAdmin != null) task.setAssignedByAdmin(assignedByAdmin);
 
         project.getTasks().add(taskRepository.save(task));
     }

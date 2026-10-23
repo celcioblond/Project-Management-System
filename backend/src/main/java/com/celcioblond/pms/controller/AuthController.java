@@ -5,7 +5,9 @@ import com.celcioblond.pms.dto.LoginResponse;
 import com.celcioblond.pms.dto.UserRegister;
 import com.celcioblond.pms.dto.UserResponse;
 import com.celcioblond.pms.security.JwtService;
+import com.celcioblond.pms.security.UserPrincipal;
 import com.celcioblond.pms.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,27 +26,21 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
 
     @PostMapping("/register")
-    public ResponseEntity<LoginResponse> register(@RequestBody UserRegister userRegister) {
-        UserResponse userResponse = userService.registerUser(userRegister);
-        String token = jwtService.generateToken(userResponse.username());
-
-        return new ResponseEntity<>(new LoginResponse(token, userResponse.username(), "EMPLOYEE"), HttpStatus.CREATED);
+    public ResponseEntity<LoginResponse> register(@Valid @RequestBody UserRegister userRegister) {
+        UserResponse user = userService.registerUser(userRegister);
+        String token = jwtService.generateToken(user.username());
+        return new ResponseEntity<>(new LoginResponse(token, user.username(), user.role()), HttpStatus.CREATED);
     }
 
+    /** Bad credentials raise an AuthenticationException, answered with 401 by the exception handler. */
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody Login credentials) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody Login credentials) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(credentials.username(), credentials.password())
         );
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        String token = jwtService.generateToken(principal.getUsername());
 
-        if (!authentication.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String token = jwtService.generateToken(credentials.username());
-        UserResponse userResponse = userService.getUserByUsername(credentials.username());
-        String role = userResponse.role() != null ? userResponse.role() : "EMPLOYEE";
-
-        return ResponseEntity.ok(new LoginResponse(token, userResponse.username(), role));
+        return ResponseEntity.ok(new LoginResponse(token, principal.getUsername(), principal.getRole().name()));
     }
 }

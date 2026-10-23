@@ -103,24 +103,11 @@ export default function TaskCommentSection({ taskId }: Props) {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [authorId, setAuthorId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CommentResponse | null>(
     null,
   );
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Resolve current user's ID
-  useEffect(() => {
-    if (!user?.username) return;
-    apiService
-      .getAllUsers()
-      .then((users) => {
-        const me = users.find((u) => u.username === user.username);
-        if (me) setAuthorId(me.id);
-      })
-      .catch(() => {});
-  }, [user]);
 
   // Load & normalise comments
   const loadComments = useCallback(async () => {
@@ -152,22 +139,6 @@ export default function TaskCommentSection({ taskId }: Props) {
   const handleSubmit = async () => {
     if (!text.trim()) return;
 
-    let aid = authorId;
-    if (!aid) {
-      try {
-        const users = await apiService.getAllUsers();
-        const me = users.find((u) => u.username === user?.username);
-        aid = me?.id ?? null;
-        if (aid) setAuthorId(aid);
-      } catch {
-        /* ignore */
-      }
-    }
-    if (!aid) {
-      setError('Could not identify your account.');
-      return;
-    }
-
     const optimistic: CommentResponse = {
       id: Date.now(),
       content: text.trim(),
@@ -186,7 +157,6 @@ export default function TaskCommentSection({ taskId }: Props) {
       await apiService.createTaskComment({
         content: optimistic.content,
         taskId,
-        authorId: aid,
       });
       await loadComments();
     } catch (e) {

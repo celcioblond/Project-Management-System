@@ -3,6 +3,7 @@ package com.celcioblond.pms.service;
 import com.celcioblond.pms.dto.TaskCommentCreate;
 import com.celcioblond.pms.dto.TaskCommentResponse;
 import com.celcioblond.pms.dto.TaskCommentUpdate;
+import com.celcioblond.pms.exception.ResourceNotFoundException;
 import com.celcioblond.pms.mapper.ResponseMapper;
 import com.celcioblond.pms.model.Task;
 import com.celcioblond.pms.model.TaskComment;
@@ -10,6 +11,8 @@ import com.celcioblond.pms.model.User;
 import com.celcioblond.pms.repository.TaskCommentRepository;
 import com.celcioblond.pms.repository.TaskRepository;
 import com.celcioblond.pms.repository.UserRepository;
+import com.celcioblond.pms.security.AccessPolicy;
+import com.celcioblond.pms.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,26 +28,26 @@ public class TaskCommentService {
     private final UserRepository userRepository;
     private final TaskRepository taskRepository;
     private final VectorStoreService vectorStoreService;
+    private final AccessPolicy accessPolicy;
 
     @Transactional(readOnly = true)
-    public List<TaskCommentResponse> getCommentsByTaskId(Long taskId) {
+    public List<TaskCommentResponse> getCommentsByTaskId(Long taskId, UserPrincipal currentUser) {
+        accessPolicy.requireTaskAccess(findTask(taskId), currentUser);
         return toResponses(taskCommentRepository.findByTaskId(taskId));
     }
 
     @Transactional(readOnly = true)
-    public List<TaskCommentResponse> getCommentsByUsername(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
-        return toResponses(taskCommentRepository.findByAuthorId(user.getId()));
+    public List<TaskCommentResponse> getCommentsForUser(UserPrincipal currentUser) {
+        return toResponses(taskCommentRepository.findByAuthorId(currentUser.getId()));
     }
 
     @Transactional
-    public TaskCommentResponse createComment(TaskCommentCreate commentCreate) {
-        Task task = taskRepository.findById(commentCreate.taskId())
-                .orElseThrow(() -> new RuntimeException("Task not found with id: " + commentCreate.taskId()));
+    public TaskCommentResponse createComment(TaskCommentCreate commentCreate, UserPrincipal currentUser) {
+        Task task = findTask(commentCreate.taskId());
+        accessPolicy.requireTaskAccess(task, currentUser);
 
-        User author = userRepository.findById(commentCreate.authorId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + commentCreate.authorId()));
+        User author = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", currentUser.getId()));
 
         TaskComment comment = new TaskComment();
         comment.setContent(commentCreate.content());
@@ -53,17 +56,20 @@ public class TaskCommentService {
         comment.setCreatedAt(LocalDateTime.now());
 
         TaskComment savedComment = taskCommentRepository.save(comment);
+        task.getComments().add(savedComment);
 
         vectorStoreService.upsertTaskComment(savedComment);
         // Re-index the parent task so its comment list stays current
-        vectorStoreService.upsertTask(taskRepository.findById(task.getId()).orElse(task));
+        vectorStoreService.upsertTask(task);
 
         return ResponseMapper.toTaskCommentResponse(savedComment);
     }
 
     @Transactional
-    public TaskCommentResponse updateComment(Long id, TaskCommentUpdate taskCommentUpdate) {
+    public TaskCommentResponse updateComment(Long id, TaskCommentUpdate taskCommentUpdate, UserPrincipal currentUser) {
         TaskComment comment = findComment(id);
+        accessPolicy.requireAuthorOrAdmin(comment.getAuthor(), currentUser);
+
         comment.setContent(taskCommentUpdate.content());
         comment.setUpdatedAt(LocalDateTime.now());
 
@@ -74,22 +80,25 @@ public class TaskCommentService {
     }
 
     @Transactional
-    public void deleteComment(Long id) {
+    public void deleteComment(Long id, UserPrincipal currentUser) {
         TaskComment comment = findComment(id);
-        Long taskId = comment.getTask() != null ? comment.getTask().getId() : null;
+        accessPolicy.requireAuthorOrAdmin(comment.getAuthor(), currentUser);
+        Task task = comment.getTask();
 
         vectorStoreService.deleteTaskComment(id);
+        task.getComments().remove(comment);
         taskCommentRepository.delete(comment);
 
         // Re-index parent task so its comment list no longer includes the deleted one
-        if (taskId != null) {
-            taskRepository.findById(taskId).ifPresent(vectorStoreService::upsertTask);
-        }
+        vectorStoreService.upsertTask(task);
+    }
+
+    private Task findTask(Long id) {
+        return taskRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Task", id));
     }
 
     private TaskComment findComment(Long id) {
-        return taskCommentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Comment not found with id: " + id));
+        return taskCommentRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Comment", id));
     }
 
     private static List<TaskCommentResponse> toResponses(List<TaskComment> comments) {

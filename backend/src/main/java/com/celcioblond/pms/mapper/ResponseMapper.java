@@ -22,7 +22,7 @@ public final class ResponseMapper {
                 user.getUsername(),
                 user.getPosition(),
                 user.getDepartment(),
-                user.getRole()
+                user.getRole() != null ? user.getRole().name() : null
         );
     }
 

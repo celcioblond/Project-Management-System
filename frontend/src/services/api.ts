@@ -1,6 +1,6 @@
 // src/services/api.ts
 import type { AxiosResponse } from 'axios';
-import { http } from './http';
+import { errorMessage, http } from './http';
 import type {
   AuthResponse,
   CommentResponse,
@@ -23,12 +23,12 @@ import type {
 export type * from '../types/api';
 
 // Unwraps the response body and turns any failure into an Error with a readable prefix
-async function call<T>(request: Promise<AxiosResponse<T>>, errorMessage: string): Promise<T> {
+async function call<T>(request: Promise<AxiosResponse<T>>, context: string): Promise<T> {
   try {
     const response = await request;
     return response.data;
   } catch (error) {
-    throw new Error(`${errorMessage}: ${String(error)}`);
+    throw new Error(`${context}: ${errorMessage(error)}`);
   }
 }
 
@@ -85,8 +85,8 @@ export const apiService = {
   getTasksByEmployee: (id: number) =>
     call(http.get<TaskResponse[]>(`/employees/${id}/tasks`), 'Failed to fetch tasks by employee'),
 
-  createTask: (data: TaskCreate, assignedByAdminId: number) =>
-    call(http.post<TaskResponse>('/tasks', data, { params: { assignedByAdminId } }), 'Failed to create task'),
+  createTask: (data: TaskCreate) =>
+    call(http.post<TaskResponse>('/tasks', data), 'Failed to create task'),
 
   updateTask: (id: number, data: TaskUpdate) =>
     call(http.put<TaskResponse>(`/tasks/${id}`, data), 'Failed to update task'),
@@ -113,8 +113,8 @@ export const apiService = {
   deleteUser: (id: number) =>
     call(http.delete<void>(`/users/${id}`), 'Failed to delete user'),
 
-  updatePassword: (id: number, newPassword: string) =>
-    call(http.patch<void>(`/users/${id}/password`, { newPassword }), 'Failed to update password'),
+  updatePassword: (id: number, newPassword: string, currentPassword?: string) =>
+    call(http.patch<void>(`/users/${id}/password`, { newPassword, currentPassword }), 'Failed to update password'),
 
   // Project comments
   getAllProjectComments: (projectId: number) =>
@@ -154,6 +154,6 @@ export const apiService = {
     return new Blob([data], { type: 'image/jpeg' });
   },
 
-  askBot: (userQuery: string, username: string) =>
-    call(http.get<string>('/chat/ask', { params: { userQuery, username } }), 'Failed to chat with bot'),
+  askBot: (message: string) =>
+    call(http.post<string>('/chat/ask', { message }), 'Failed to chat with bot'),
 };

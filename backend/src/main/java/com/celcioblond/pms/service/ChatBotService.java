@@ -1,14 +1,14 @@
 package com.celcioblond.pms.service;
 
-import lombok.extern.slf4j.Slf4j;
+import com.celcioblond.pms.security.AccessPolicy;
+import com.celcioblond.pms.security.UserPrincipal;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,48 +16,46 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Slf4j
+/**
+ * RAG chatbot. The retrieved context is restricted to documents the current
+ * user is allowed to see, so access control never depends on the prompt.
+ */
 @Service
 public class ChatBotService {
 
-    private final VectorStore vectorStore;
+    private final VectorStoreService vectorStoreService;
+    private final AccessPolicy accessPolicy;
     private final ChatClient chatClient;
     private final String promptTemplate;
 
-    public ChatBotService(VectorStore vectorStore,
+    public ChatBotService(VectorStoreService vectorStoreService,
+                          AccessPolicy accessPolicy,
                           ChatClient chatClient,
                           @Value("classpath:prompts/chatbot-rag-prompt.st") Resource promptResource) throws IOException {
-        this.vectorStore = vectorStore;
+        this.vectorStoreService = vectorStoreService;
+        this.accessPolicy = accessPolicy;
         this.chatClient = chatClient;
         // Read via stream (not getFile()) so it also works when packaged inside a jar
         this.promptTemplate = promptResource.getContentAsString(StandardCharsets.UTF_8);
     }
 
-    public String getBotResponse(String userQuery, String username) {
-        try {
-            PromptTemplate template = PromptTemplate.builder()
-                    .template(promptTemplate)
-                    .variables(Map.of(
-                            "userQuery", userQuery,
-                            "context", fetchSemanticContext(userQuery),
-                            "username", username))
-                    .build();
+    @Transactional(readOnly = true)
+    public String getBotResponse(String userQuery, UserPrincipal currentUser) {
+        PromptTemplate template = PromptTemplate.builder()
+                .template(promptTemplate)
+                .variables(Map.of(
+                        "userQuery", userQuery,
+                        "context", fetchSemanticContext(userQuery, currentUser),
+                        "username", currentUser.getUsername()))
+                .build();
 
-            return chatClient.prompt(template.create()).call().content();
-        } catch (Exception e) {
-            log.error("Chatbot request failed", e);
-            return "Bot Failed: " + e.getMessage();
-        }
+        return chatClient.prompt(template.create()).call().content();
     }
 
-    private String fetchSemanticContext(String userQuery) {
-        List<Document> documents = vectorStore.similaritySearch(
-                SearchRequest.builder()
-                        .query(userQuery)
-                        .topK(20)
-                        .similarityThreshold(0.3)
-                        .build()
-        );
+    private String fetchSemanticContext(String userQuery, UserPrincipal currentUser) {
+        List<Long> projectIds = currentUser.isAdmin() ? List.of() : accessPolicy.accessibleProjectIds(currentUser);
+        List<Document> documents = vectorStoreService.search(
+                userQuery, currentUser.getId(), currentUser.isAdmin(), projectIds);
 
         return documents.stream()
                 .map(document -> document.getFormattedContent() + "\n---\n")

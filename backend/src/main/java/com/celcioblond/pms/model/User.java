@@ -35,7 +35,9 @@ public class User {
 
     private String position;
     private String department;
-    private String role;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
 
     @ManyToMany(mappedBy = "assignedEmployees")
     private List<Project> assignedProjects = new ArrayList<>();

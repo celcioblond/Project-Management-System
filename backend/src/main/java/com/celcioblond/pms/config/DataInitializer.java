@@ -1,5 +1,6 @@
 package com.celcioblond.pms.config;
 
+import com.celcioblond.pms.model.Role;
 import com.celcioblond.pms.model.User;
 import com.celcioblond.pms.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (!userRepository.findByRole("ADMIN").isEmpty()) {
+        if (!userRepository.findByRole(Role.ADMIN).isEmpty()) {
             log.info("Admin user already exists — skipping seed.");
             return;
         }
@@ -50,7 +51,7 @@ public class DataInitializer implements CommandLineRunner {
         admin.setEmail(adminEmail);
         admin.setPassword(passwordEncoder.encode(adminPassword));
         admin.setName(adminName);
-        admin.setRole("ADMIN");
+        admin.setRole(Role.ADMIN);
         admin.setPosition("Administrator");
         admin.setDepartment("Management");
 

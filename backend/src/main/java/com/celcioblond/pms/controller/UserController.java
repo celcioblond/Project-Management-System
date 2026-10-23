@@ -4,11 +4,13 @@ import com.celcioblond.pms.dto.PasswordUpdate;
 import com.celcioblond.pms.dto.UserCreate;
 import com.celcioblond.pms.dto.UserResponse;
 import com.celcioblond.pms.dto.UserUpdate;
-import com.celcioblond.pms.security.JwtService;
+import com.celcioblond.pms.security.UserPrincipal;
 import com.celcioblond.pms.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +21,6 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
-    private final JwtService jwtService;
 
     @GetMapping("/users")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
@@ -37,31 +38,34 @@ public class UserController {
     }
 
     @PostMapping("/users")
-    public ResponseEntity<UserResponse> createUser(@RequestBody UserCreate userCreate) {
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreate userCreate) {
         return new ResponseEntity<>(userService.createUser(userCreate), HttpStatus.CREATED);
     }
 
     @PutMapping("/users/{id}")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @RequestBody UserUpdate userUpdate) {
-        return ResponseEntity.ok(userService.updateUser(id, userUpdate));
+    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id,
+                                                   @Valid @RequestBody UserUpdate userUpdate,
+                                                   @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(userService.updateUser(id, userUpdate, currentUser));
     }
 
     @DeleteMapping("/users/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        userService.deleteUser(id);
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal currentUser) {
+        userService.deleteUser(id, currentUser);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/users/{id}/password")
-    public ResponseEntity<Void> updatePassword(@PathVariable Long id, @RequestBody PasswordUpdate passwordUpdate) {
-        userService.updatePassword(id, passwordUpdate.newPassword());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Void> updatePassword(@PathVariable Long id,
+                                               @Valid @RequestBody PasswordUpdate passwordUpdate,
+                                               @AuthenticationPrincipal UserPrincipal currentUser) {
+        userService.updatePassword(id, passwordUpdate, currentUser);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/projects/{projectId}/colleagues")
     public ResponseEntity<List<UserResponse>> getColleaguesByProject(@PathVariable Long projectId,
-                                                                     @RequestHeader("Authorization") String token) {
-        String username = jwtService.extractUsername(token.substring(7));
-        return ResponseEntity.ok(userService.getColleaguesByProjectId(projectId, username));
+                                                                     @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(userService.getColleaguesByProjectId(projectId, currentUser));
     }
 }

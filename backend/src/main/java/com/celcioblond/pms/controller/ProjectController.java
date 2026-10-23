@@ -1,11 +1,14 @@
 package com.celcioblond.pms.controller;
 
 import com.celcioblond.pms.dto.*;
-import com.celcioblond.pms.security.JwtService;
+import com.celcioblond.pms.security.UserPrincipal;
 import com.celcioblond.pms.service.ProjectService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,7 +19,6 @@ import java.util.List;
 public class ProjectController {
 
     private final ProjectService projectService;
-    private final JwtService jwtService;
 
     @GetMapping("/projects")
     public ResponseEntity<List<ProjectResponse>> getAllProjects() {
@@ -24,24 +26,27 @@ public class ProjectController {
     }
 
     @GetMapping("/projects/my-projects")
-    public ResponseEntity<List<ProjectResponse>> getMyProjects(@RequestHeader("Authorization") String token) {
-        String username = jwtService.extractUsername(token.substring(7));
-        return ResponseEntity.ok(projectService.getProjectsByUsername(username));
+    public ResponseEntity<List<ProjectResponse>> getMyProjects(@AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(projectService.getProjectsForUser(currentUser));
     }
 
     @GetMapping("/projects/{id}")
-    public ResponseEntity<ProjectResponse> getProjectById(@PathVariable Long id) {
-        return ResponseEntity.ok(projectService.getProjectById(id));
+    public ResponseEntity<ProjectResponse> getProjectById(@PathVariable Long id,
+                                                          @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(projectService.getProjectById(id, currentUser));
     }
 
     @PostMapping("/projects")
-    public ResponseEntity<ProjectResponse> addProject(@RequestBody ProjectCreate projectCreate) {
-        return new ResponseEntity<>(projectService.addProject(projectCreate), HttpStatus.CREATED);
+    public ResponseEntity<ProjectResponse> addProject(@Valid @RequestBody ProjectCreate projectCreate,
+                                                      @AuthenticationPrincipal UserPrincipal currentUser) {
+        return new ResponseEntity<>(projectService.addProject(projectCreate, currentUser), HttpStatus.CREATED);
     }
 
     @PutMapping("/projects/{id}")
-    public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long id, @RequestBody ProjectUpdate projectUpdate) {
-        return ResponseEntity.ok(projectService.updateProject(id, projectUpdate));
+    public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long id,
+                                                         @Valid @RequestBody ProjectUpdate projectUpdate,
+                                                         @AuthenticationPrincipal UserPrincipal currentUser) {
+        return ResponseEntity.ok(projectService.updateProject(id, projectUpdate, currentUser));
     }
 
     @DeleteMapping("/projects/{id}")
@@ -51,20 +56,12 @@ public class ProjectController {
     }
 
     @PostMapping("/project/generate-project")
-    public ResponseEntity<String> generateProject(@RequestBody GenerateProject request) {
-        try {
-            return ResponseEntity.ok(projectService.generateProject(request.name(), request.type()));
-        } catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public ResponseEntity<String> generateProject(@Valid @RequestBody GenerateProject request) {
+        return ResponseEntity.ok(projectService.generateProject(request.name(), request.type()));
     }
 
-    @PostMapping("/project/generate-diagram")
-    public ResponseEntity<byte[]> generateDiagram(@RequestBody GenerateDiagram request) {
-        try {
-            return ResponseEntity.ok(projectService.generateImage(request.title(), request.type(), request.description()));
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    @PostMapping(value = "/project/generate-diagram", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> generateDiagram(@Valid @RequestBody GenerateDiagram request) {
+        return ResponseEntity.ok(projectService.generateImage(request.title(), request.type(), request.description()));
     }
 }

@@ -102,7 +102,6 @@ export interface ProjectCreate{
   startDate: string;     // ISO LocalDateTime string e.g. "2025-01-15T00:00:00"
   endDate: string;
   assignedEmployeeIds: number[];
-  createdByAdminId: number;
   tasks?: TaskCreate[];
   comments?: string[];
   projectDiagram?: string | null;
@@ -116,7 +115,6 @@ export interface ProjectUpdate{
   startDate?: string;
   endDate?: string;
   assignedEmployeeIds?: number[];
-  updatedByAdminId?: number;
   newTasks?: TaskCreate[];
   projectDiagram?: string | null;
 }
@@ -129,7 +127,6 @@ export interface TaskCreate{
   dueDate: string;       // ISO LocalDateTime string
   projectId: number;
   assignedEmployeeIds: number[];
-  assignedByAdminId: number;
 }
 
 export interface TaskUpdate{
@@ -138,20 +135,17 @@ export interface TaskUpdate{
   status?: string;
   priority?: string;
   dueDate?: string;
-  updatedByAdminId?: number;
   assignedEmployeeIds?: number[];
 }
 
 export interface ProjectCommentCreate{
   content: string;
   projectId: number;
-  authorId: number;
 }
 
 export interface TaskCommentCreate {
   content: string;
   taskId: number;
-  authorId: number;
 }
 
 export interface CommentUpdate {

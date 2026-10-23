@@ -41,7 +41,6 @@ const PRIORITY_LABELS: Record<string, string> = {
 
 interface CreateTaskModalProps {
   open: boolean;
-  adminId: number | null;
   projects: ProjectResponse[];
   employees: UserResponse[];
   onClose: () => void;
@@ -180,7 +179,6 @@ function IconSelect({
 
 export default function CreateTaskModal({
   open,
-  adminId,
   projects,
   employees,
   onClose,
@@ -265,7 +263,7 @@ export default function CreateTaskModal({
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
-    if (!validate() || adminId === null) return;
+    if (!validate()) return;
 
     const payload: TaskCreate = {
       title: form.title.trim(),
@@ -275,12 +273,11 @@ export default function CreateTaskModal({
       dueDate: `${form.dueDate}T00:00:00`,
       projectId: Number(form.projectId),
       assignedEmployeeIds: selectedIds,
-      assignedByAdminId: adminId,
     };
 
     setSubmitting(true);
     try {
-      await apiService.createTask(payload, adminId);
+      await apiService.createTask(payload);
       sileo.success({
         title: 'Task created',
         description: `"${payload.title}" has been added.`,
@@ -493,7 +490,7 @@ export default function CreateTaskModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting || adminId === null}
+            disabled={submitting}
             className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold transition-all duration-150 disabled:opacity-60 flex items-center gap-2"
           >
             {submitting && (
