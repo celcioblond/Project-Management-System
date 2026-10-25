@@ -4,12 +4,10 @@ services:
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    env_file:
+      - .env
     ports:
-      - '127.0.0.1:${DB_PORT:-5432}:5432'
+      - '5432:5432'
     volumes:
       - pgvector_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,23 +22,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
-      JWT_EXPIRATION: ${JWT_EXPIRATION:-PT8H}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
-      ADMIN_NAME: ${ADMIN_NAME:-System Administrator}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
-      AI_RATE_LIMIT_PER_MINUTE: ${AI_RATE_LIMIT_PER_MINUTE:-10}
-    expose:
-      - '8080'
+    ports:
+      - '8080:8080'
 
   frontend:
     build:
@@ -48,11 +36,13 @@ services:
       args:
         VITE_API_URL: /api
     restart: unless-stopped
+    env_file:
+      - ./frontend/.env
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - '${APP_PORT:-8081}:8080'
+      - '5173:8080'
 
 volumes:
   pgvector_data:
