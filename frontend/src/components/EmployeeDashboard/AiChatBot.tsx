@@ -22,16 +22,52 @@ const SUGGESTION_CHIPS = [
   'Action plan for today',
 ];
 
-export default function AiChatBot() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+// The conversation lives in sessionStorage so it survives navigation and page
+// reloads; AuthContext.logout() clears sessionStorage, which resets it.
+interface StoredChat {
+  messages: ChatMessage[];
+  isOpen: boolean;
+}
+
+const storageKey = (username: string) => `chat:${username}`;
+
+function loadChat(username: string): StoredChat {
+  try {
+    const raw = sessionStorage.getItem(storageKey(username));
+    if (raw) {
+      const parsed = JSON.parse(raw) as StoredChat;
+      if (Array.isArray(parsed.messages) && parsed.messages.length > 0) {
+        return {
+          isOpen: !!parsed.isOpen,
+          messages: parsed.messages.map((m) => ({
+            ...m,
+            timestamp: new Date(m.timestamp),
+          })),
+        };
+      }
+    }
+  } catch {
+    // Corrupted entry: fall through to a fresh conversation
+  }
+  return { messages: [WELCOME_MESSAGE], isOpen: false };
+}
+
+export default function AiChatBot({ username }: { username: string }) {
+  const [initial] = useState(() => loadChat(username));
+  const [isOpen, setIsOpen] = useState(initial.isOpen);
+  const [messages, setMessages] = useState<ChatMessage[]>(initial.messages);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUnread, setHasUnread] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const idCounter = useRef(1);
+  const idCounter = useRef(Math.max(...initial.messages.map((m) => m.id)) + 1);
+
+  useEffect(() => {
+    const data: StoredChat = { messages, isOpen };
+    sessionStorage.setItem(storageKey(username), JSON.stringify(data));
+  }, [messages, isOpen, username]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
