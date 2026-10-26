@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import CardNote from '../components/EmployeeDashboard/CardNote';
-import AiChatBot from '../components/EmployeeDashboard/AiChatBot';
 import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/api';
 import type { ProjectResponse } from '../services/api';
@@ -171,9 +170,6 @@ const EmployeeDashboard = () => {
           </>
         )}
       </div>
-
-      {/* AI Project Assistant — floats bottom-right over the dashboard */}
-      <AiChatBot />
     </div>
   );
 };
