@@ -7,6 +7,7 @@ import './index.css';
 import App from './App.tsx';
 import { AuthProvider } from './context/AuthContext.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
+import ChatBotHost from './components/EmployeeDashboard/ChatBotHost.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')!).render(
           <Navbar />
           <App />
         </div>
+        <ChatBotHost />
       </AuthProvider>
     </ErrorBoundary>
   </BrowserRouter>,
