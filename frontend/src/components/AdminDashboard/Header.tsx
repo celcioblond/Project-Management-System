@@ -18,6 +18,7 @@ import DeleteProjectModal from './DeleteProjectModal';
 import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal';
 import DeleteTaskModal from './DeleteTaskModal';
+import CreateCommentModal from './CreateCommentModal';
 import {
   apiService,
   type UserResponse,
@@ -137,6 +138,7 @@ const Header = () => {
   const [deleteProjectTarget, setDeleteProjectTarget] =
     useState<ProjectResponse | null>(null);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
+  const [createCommentOpen, setCreateCommentOpen] = useState(false);
   const [editTaskTarget, setEditTaskTarget] = useState<TaskResponse | null>(
     null,
   );
@@ -252,10 +254,7 @@ const Header = () => {
 
   // ─── Comment CRUD ─────────────────────────────────────────────────────────
 
-  const handleAddComment = () => {
-    // TODO: open CreateCommentModal
-    console.log('open create comment modal — wire up your modal here');
-  };
+  const handleAddComment = () => setCreateCommentOpen(true);
 
   const handleEditComment = (c: CommentResponse) => {
     // TODO: open EditCommentModal pre-populated with `c`
@@ -448,6 +447,12 @@ const Header = () => {
         task={deleteTaskTarget}
         onClose={() => setDeleteTaskTarget(null)}
         onDeleted={loadTasks}
+      />
+      <CreateCommentModal
+        open={createCommentOpen}
+        projects={projects}
+        onClose={() => setCreateCommentOpen(false)}
+        onCreated={() => loadComments(projects)}
       />
     </>
   );
