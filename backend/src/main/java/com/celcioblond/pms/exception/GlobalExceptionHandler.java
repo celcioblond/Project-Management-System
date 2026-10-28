@@ -1,6 +1,8 @@
 package com.celcioblond.pms.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.retry.NonTransientAiException;
+import org.springframework.ai.retry.TransientAiException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -13,6 +15,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -56,6 +59,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
         return problem(HttpStatus.FORBIDDEN, "You do not have permission to perform this action.");
+    }
+
+    /**
+     * OpenAI rejected the call (e.g. invalid key, quota) or could not be reached. OpenAI is the
+     * only outbound HTTP dependency, so connection failures are reported the same way.
+     */
+    @ExceptionHandler({NonTransientAiException.class, TransientAiException.class, ResourceAccessException.class})
+    public ProblemDetail handleAiUnavailable(RuntimeException ex) {
+        log.warn("AI provider call failed: {}", ex.getMessage());
+        return problem(HttpStatus.SERVICE_UNAVAILABLE,
+                "The AI service is unavailable. Check that OPENAI_API_KEY is valid and try again later.");
     }
 
     @ExceptionHandler(Exception.class)
