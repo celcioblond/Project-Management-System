@@ -111,9 +111,9 @@ const Register = () => {
                 {...register('username', {
                   required: 'Username is required',
                   pattern: {
-                    value: /^[a-zA-Z0-9_-]{3,20}$/,
+                    value: /^[a-zA-Z0-9._-]{3,50}$/,
                     message:
-                      'Username must be 3-20 characters (letters, numbers, underscore, hyphen only)',
+                      'Username must be 3-50 characters (letters, numbers, dot, underscore, hyphen only)',
                   },
                 })}
                 className={`p-2 outline-2 rounded focus:outline-blue-400 w-full ${
@@ -163,16 +163,16 @@ const Register = () => {
                 {...register('password', {
                   required: 'Password is required',
                   minLength: {
-                    value: 6,
-                    message: 'Password must be at least 6 characters',
+                    value: 8,
+                    message: 'Password must be at least 8 characters',
                   },
                   maxLength: {
-                    value: 20,
-                    message: 'Password can be maximum of 20 characters',
+                    value: 72,
+                    message: 'Password can be maximum of 72 characters',
                   },
                   pattern: {
                     value:
-                      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/,
+                      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/,
                     message:
                       'Password must include uppercase, lowercase, number, and special character',
                   },
