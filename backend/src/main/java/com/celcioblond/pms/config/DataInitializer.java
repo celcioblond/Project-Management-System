@@ -24,6 +24,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
+    static final int MIN_PASSWORD_LENGTH = 8;
+    static final int MAX_PASSWORD_LENGTH = 72;
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -44,6 +47,13 @@ public class DataInitializer implements CommandLineRunner {
         if (!userRepository.findByRole(Role.ADMIN).isEmpty()) {
             log.info("Admin user already exists — skipping seed.");
             return;
+        }
+
+        // Same bounds as every other account (UserCreate); BCrypt ignores bytes beyond 72
+        if (adminPassword == null || adminPassword.length() < MIN_PASSWORD_LENGTH
+                || adminPassword.length() > MAX_PASSWORD_LENGTH) {
+            throw new IllegalStateException("ADMIN_PASSWORD must be between " + MIN_PASSWORD_LENGTH
+                    + " and " + MAX_PASSWORD_LENGTH + " characters.");
         }
 
         User admin = new User();
