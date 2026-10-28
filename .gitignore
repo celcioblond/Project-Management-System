@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# spring-dotenv configuration (no secrets): tells the API where the root .env is
+!backend/src/main/resources/.env.properties
 *.pem
 *.key
 application-local.properties
