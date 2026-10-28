@@ -27,6 +27,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProjectService {
 
+    /** Used when a project is created without a status; matches the values offered by the SPA. */
+    static final String DEFAULT_STATUS = "NOT_STARTED";
+
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final TaskRepository taskRepository;
@@ -62,7 +65,8 @@ public class ProjectService {
         project.setName(projectCreate.name());
         project.setType(projectCreate.type());
         project.setDescription(projectCreate.description());
-        project.setStatus("Priority");
+        project.setStatus(projectCreate.status() != null && !projectCreate.status().isBlank()
+                ? projectCreate.status() : DEFAULT_STATUS);
         project.setStartDate(projectCreate.startDate());
         project.setEndDate(projectCreate.endDate());
         project.setCreatedAt(LocalDateTime.now());
