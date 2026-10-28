@@ -6,8 +6,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    # Loopback only: reachable from this machine (e.g. `./mvnw spring-boot:run`), not from the network
     ports:
-      - '5432:5432'
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
     volumes:
       - pgvector_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,8 +28,7 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-    ports:
-      - '8080:8080'
+    # Not published: the API is only reachable through the frontend's nginx proxy
 
   frontend:
     build:
@@ -36,13 +36,11 @@ services:
       args:
         VITE_API_URL: /api
     restart: unless-stopped
-    env_file:
-      - ./frontend/.env
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - '5173:8080'
+      - '${APP_PORT:-8081}:8080'
 
 volumes:
   pgvector_data:
