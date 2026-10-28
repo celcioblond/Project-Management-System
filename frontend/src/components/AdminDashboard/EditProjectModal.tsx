@@ -370,6 +370,9 @@ export default function EditProjectModal({
 
     if (!form.name.trim()) e.name = 'Project name is required.';
     if (!form.type.trim()) e.type = 'Project type is required.';
+    if (!form.description.trim()) e.description = 'Description is required.';
+    else if (form.description.length > 255)
+      e.description = 'Description must be at most 255 characters.';
     if (!form.status) e.status = 'Select a status.';
     if (!form.startDate) e.startDate = 'Start date is required.';
     if (!form.endDate) e.endDate = 'End date is required.';
@@ -482,11 +485,11 @@ export default function EditProjectModal({
           </Field>
 
           {/* Description with AI generate button */}
-          <Field label="Description:">
-            <div className="flex items-start gap-2.5 border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400 transition-colors">
+          <Field label="Description:" error={errors.description}>
+            <div className={`flex items-start gap-2.5 border rounded-lg ${errors.description ? 'border-red-400' : 'border-slate-300'} px-3 py-2.5 bg-white focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400 transition-colors`}>
               <AlignLeft className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
               <textarea
-                placeholder="Brief description (optional)"
+                placeholder="Brief description"
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
                 disabled={submitting || generating}
