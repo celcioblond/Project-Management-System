@@ -54,19 +54,11 @@ const Login = () => {
       <div>
         <input
           {...register('username', {
+            // Only the limits the API accepts; credentials themselves are checked server-side
             required: 'Username is required',
-            pattern: {
-              value: /^[a-zA-Z0-9_]{5,15}$/,
-              message:
-                'Username must be 5-15 characters (letters, numbers, underscore only)',
-            },
-            minLength: {
-              value: 3,
-              message: '3 characters mininum',
-            },
             maxLength: {
-              value: 20,
-              message: '20 characters maximum',
+              value: 50,
+              message: 'Username can be maximum of 50 characters',
             },
           })}
           placeholder="Username"
@@ -88,13 +80,9 @@ const Login = () => {
         <input
           {...register('password', {
             required: 'Password is required',
-            minLength: {
-              value: 6,
-              message: 'Password must be at least 6 characters',
-            },
             maxLength: {
-              value: 20,
-              message: 'Password can be maximum of 20 characters',
+              value: 72,
+              message: 'Password can be maximum of 72 characters',
             },
           })}
           type="password"
