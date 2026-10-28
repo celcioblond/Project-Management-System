@@ -21,7 +21,12 @@ public class JwtService {
     public JwtService(@Value("${jwt.secret}") String secret,
                       @Value("${jwt.expiration:PT8H}") Duration tokenTtl) {
         // hmacShaKeyFor rejects keys shorter than 256 bits, so a weak secret fails at startup
-        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        try {
+            this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("JWT_SECRET must be a Base64-encoded key of at least 256 bits. "
+                    + "Generate one with: openssl rand -base64 32", e);
+        }
         this.tokenTtl = tokenTtl;
     }
 
