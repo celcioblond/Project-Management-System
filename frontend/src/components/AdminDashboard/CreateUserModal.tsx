@@ -233,14 +233,14 @@ export default function CreateUserModal({
 
     if (!form.name.trim()) e.name = 'Full name is required.';
     if (!form.username.trim()) e.username = 'Username is required.';
-    else if (!/^[a-zA-Z0-9_-]{3,20}$/.test(form.username))
-      e.username = '3–20 chars, letters/numbers/underscore/hyphen only.';
+    else if (!/^[a-zA-Z0-9._-]{3,50}$/.test(form.username))
+      e.username = '3–50 chars, letters/numbers/dot/underscore/hyphen only.';
     if (!form.email.trim()) e.email = 'Email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = 'Enter a valid email address.';
     if (!form.password) e.password = 'Password is required.';
-    else if (form.password.length < 6)
-      e.password = 'Password must be at least 6 characters.';
+    else if (form.password.length < 8 || form.password.length > 72)
+      e.password = 'Password must be 8–72 characters.';
     if (!form.position) e.position = 'Select a position.';
     if (!form.department) e.department = 'Select a department.';
     if (!form.role) e.role = 'Select a role.';
