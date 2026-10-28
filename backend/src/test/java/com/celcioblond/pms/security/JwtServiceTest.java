@@ -52,6 +52,16 @@ class JwtServiceTest {
     void secretShorterThan256BitsFailsAtStartup() {
         String weak = Base64.getEncoder().encodeToString("too-short".getBytes());
 
-        assertThatThrownBy(() -> new JwtService(weak, Duration.ofHours(1))).isInstanceOf(WeakKeyException.class);
+        assertThatThrownBy(() -> new JwtService(weak, Duration.ofHours(1)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("JWT_SECRET")
+                .hasCauseInstanceOf(WeakKeyException.class);
+    }
+
+    @Test
+    void placeholderSecretFailsAtStartupWithAHint() {
+        assertThatThrownBy(() -> new JwtService("your_jwt_secret_key", Duration.ofHours(1)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("openssl rand -base64 32");
     }
 }
