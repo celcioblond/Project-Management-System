@@ -49,10 +49,21 @@ describe('Login', () => {
     const login = vi.spyOn(apiService, 'login');
     renderLogin();
 
-    await submit('bad!', 'x');
+    await userEvent.setup().click(screen.getByRole('button', { name: /login/i }));
 
-    expect(await screen.findByText(/Username must be 5-15 characters/)).toBeInTheDocument();
-    expect(screen.getByText('Password must be at least 6 characters')).toBeInTheDocument();
+    expect(await screen.findByText('Username is required')).toBeInTheDocument();
+    expect(screen.getByText('Password is required')).toBeInTheDocument();
     expect(login).not.toHaveBeenCalled();
+  });
+
+  it('accepts any account the API can create (short usernames, long passwords)', async () => {
+    const session = { token: 'jwt', username: 'ana', role: 'EMPLOYEE' };
+    const login = vi.spyOn(apiService, 'login').mockResolvedValue(session);
+    renderLogin();
+
+    await submit('ana', 'a-long-generated-passphrase-of-40-chars!');
+
+    expect(await screen.findByText('employee dashboard')).toBeInTheDocument();
+    expect(login).toHaveBeenCalledWith({ username: 'ana', password: 'a-long-generated-passphrase-of-40-chars!' });
   });
 });
