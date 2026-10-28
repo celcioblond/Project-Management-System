@@ -9,6 +9,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -134,6 +135,35 @@ class ApiIntegrationTest {
         var captor = org.mockito.ArgumentCaptor.forClass(SearchRequest.class);
         verify(vectorStore).similaritySearch(captor.capture());
         assertThat(captor.getValue().hasFilterExpression()).isTrue();
+    }
+
+    @Test
+    void projectAndTaskKeepTheStatusAndPrioritySent() throws Exception {
+        JsonNode project = json(perform(post("/api/projects").contentType(MediaType.APPLICATION_JSON).content("""
+                {"name":"Tunnel","description":"Rail tunnel","status":"IN_PROGRESS"}
+                """), adminToken).andExpect(status().isCreated()));
+        assertThat(project.get("status").asText()).isEqualTo("IN_PROGRESS");
+        assertThat(json(perform(get("/api/projects/" + createProject()), adminToken)).get("status").asText())
+                .isEqualTo("NOT_STARTED");
+
+        JsonNode task = json(perform(post("/api/tasks").contentType(MediaType.APPLICATION_JSON).content("""
+                {"title":"Survey","status":"IN_PROGRESS","priority":"HIGH","projectId":%d}
+                """.formatted(project.get("id").asLong())), adminToken).andExpect(status().isCreated()));
+        JsonNode fetched = json(perform(get("/api/tasks/" + task.get("id").asLong()), adminToken)
+                .andExpect(status().isOk()));
+        assertThat(fetched.get("status").asText()).isEqualTo("IN_PROGRESS");
+        assertThat(fetched.get("priority").asText()).isEqualTo("HIGH");
+    }
+
+    @Test
+    void aiProviderFailuresAreReportedAsServiceUnavailable() throws Exception {
+        Employee alice = register();
+        when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of());
+        when(chatModel.call(any(Prompt.class))).thenThrow(new NonTransientAiException("401 - invalid api key"));
+
+        JsonNode problem = json(perform(post("/api/chat/ask").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"Hi\"}"), alice.token()).andExpect(status().isServiceUnavailable()));
+        assertThat(problem.get("detail").asText()).contains("OPENAI_API_KEY");
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
