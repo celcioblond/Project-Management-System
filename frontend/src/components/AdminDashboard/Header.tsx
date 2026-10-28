@@ -7,7 +7,7 @@ import {
   CheckSquare,
   MessageSquare,
 } from 'lucide-react';
-import { sileo, Toaster } from 'sileo';
+import { sileo } from 'sileo';
 import ManageCard, { type ColumnDef } from './ManageCard';
 import CreateUserModal from './CreateUserModal';
 import EditUserModal from './EditUserModal';
@@ -19,6 +19,7 @@ import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal';
 import DeleteTaskModal from './DeleteTaskModal';
 import CreateCommentModal from './CreateCommentModal';
+import EditCommentModal from './EditCommentModal';
 import {
   apiService,
   type UserResponse,
@@ -139,6 +140,8 @@ const Header = () => {
     useState<ProjectResponse | null>(null);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createCommentOpen, setCreateCommentOpen] = useState(false);
+  const [editCommentTarget, setEditCommentTarget] =
+    useState<CommentResponse | null>(null);
   const [editTaskTarget, setEditTaskTarget] = useState<TaskResponse | null>(
     null,
   );
@@ -223,10 +226,10 @@ const Header = () => {
     loadTasks();
   }, [loadUsers, loadProjects, loadTasks]);
 
-  // Load comments once projects are available
+  // Load comments once projects have loaded (an empty list ends the skeleton too)
   useEffect(() => {
-    if (projects.length > 0) loadComments(projects);
-  }, [projects, loadComments]);
+    if (!loadingProjects) loadComments(projects);
+  }, [projects, loadingProjects, loadComments]);
 
   // ─── User CRUD ────────────────────────────────────────────────────────────
 
@@ -256,10 +259,7 @@ const Header = () => {
 
   const handleAddComment = () => setCreateCommentOpen(true);
 
-  const handleEditComment = (c: CommentResponse) => {
-    // TODO: open EditCommentModal pre-populated with `c`
-    console.log('edit comment', c);
-  };
+  const handleEditComment = (c: CommentResponse) => setEditCommentTarget(c);
 
   const handleDeleteComment = async (c: CommentResponse) => {
     if (!window.confirm('Delete this comment? This cannot be undone.')) return;
@@ -279,8 +279,6 @@ const Header = () => {
 
   return (
     <>
-      <Toaster position="bottom-right" />
-
       <div className="drawer lg:drawer-open">
         <input id="my-drawer-4" type="checkbox" className="drawer-toggle" />
 
@@ -453,6 +451,12 @@ const Header = () => {
         projects={projects}
         onClose={() => setCreateCommentOpen(false)}
         onCreated={() => loadComments(projects)}
+      />
+      <EditCommentModal
+        open={editCommentTarget !== null}
+        comment={editCommentTarget}
+        onClose={() => setEditCommentTarget(null)}
+        onUpdated={() => loadComments(projects)}
       />
     </>
   );
